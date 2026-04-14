@@ -1,280 +1,334 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Дорама | Пужа</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-  <style>
-    :root {
-      --primary: #ff00d0;
-      --dark: #1a1a2e;
-      --light: #ffb3f0;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Montserrat', sans-serif;
-    }
-
-    body {
-      background-color: var(--dark);
-      color: var(--light);
-    }
-
-    /* Navbar */
-    .navbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background-color: #2e2c3a;
-      padding: 16px 40px;
-      color: var(--primary);
-    }
-
-    .navbar .logo {
-      display: flex;
-      align-items: center;
-      font-size: 22px;
-      font-weight: bold;
-      color: var(--primary);
-    }
-
-    .navbar .logo i {
-      margin-right: 8px;
-      font-size: 24px;
-    }
-
-    .nav-links {
-      display: flex;
-      gap: 20px;
-    }
-
-    .nav-links a {
-      color: var(--light);
-      text-decoration: none;
-      font-size: 16px;
-      transition: color 0.2s;
-    }
-
-    .nav-links a:hover {
-      color: #ffffff;
-    }
-
-    .nav-icons {
-      display: flex;
-      gap: 20px;
-      font-size: 20px;
-      color: var(--light);
-      cursor: pointer;
-    }
-
-    h1 {
-      text-align: center;
-      margin: 2rem 0 1rem;
-      font-size: 2rem;
-    }
-
-    .manga-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 1.5rem;
-      padding: 0 2rem 2rem;
-    }
-
-    .manga-card {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 10px;
-      overflow: hidden;
-      transition: transform 0.3s, box-shadow 0.3s;
-      text-decoration: none;
-      color: inherit;
-    }
-
-    .manga-card:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 0 15px var(--primary);
-    }
-
-    .manga-card img {
-      width: 100%;
-      height: 250px;
-      object-fit: cover;
-    }
-
-    .manga-info {
-      padding: 1rem;
-    }
-
-    .manga-info h3 {
-      color: #ffffff;
-      margin-bottom: 0.3rem;
-      font-size: 1.1rem;
-    }
-
-    .manga-info h5 {
-      color: #ffffff;
-      margin-bottom: 0.3rem;
-      font-size: 0.9rem;
-    }
-
-    .rating {
-      color: gold;
-      font-weight: 700;
-    }
-
-    @media (max-width: 768px) {
-      .nav-links {
-        display: none;
-      }
-
-      .nav-icons {
-        gap: 10px;
-      }
-
-      .navbar {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      h1 {
-        font-size: 1.5rem;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Imtihon tayyorgarlik — Akademik ko'nikmalar</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#f5f5f0;color:#1a1a1a;padding:1.5rem}
+  .wrap{max-width:800px;margin:0 auto}
+  .page-title{font-size:22px;font-weight:600;margin-bottom:0.25rem}
+  .page-sub{font-size:14px;color:#666;margin-bottom:1.5rem}
+  .topic{background:#fff;border:1px solid #e0e0d8;border-radius:12px;margin-bottom:1rem;overflow:hidden}
+  .topic-header{padding:0.85rem 1.25rem;border-bottom:1px solid #e0e0d8;display:flex;align-items:center;gap:10px;background:#fafaf8}
+  .topic-body{padding:1rem 1.25rem}
+  .num-badge{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+  .nb-p{background:#EEEDFE;color:#3C3489}
+  .nb-t{background:#E1F5EE;color:#0F6E56}
+  .nb-c{background:#FAECE7;color:#993C1D}
+  .nb-b{background:#E6F1FB;color:#185FA5}
+  .nb-g{background:#EAF3DE;color:#3B6D11}
+  .nb-a{background:#FAEEDA;color:#854F0B}
+  .topic-title{font-size:15px;font-weight:600;color:#1a1a1a}
+  .topic-sub{font-size:12px;color:#888;margin-top:2px}
+  .def-block{background:#f5f5f0;border-radius:8px;padding:0.7rem 1rem;margin-bottom:0.6rem}
+  .def-label{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px}
+  .def-text{font-size:13px;color:#1a1a1a;line-height:1.65}
+  .def-text b{font-weight:600}
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:0.6rem}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:0.6rem}
+  @media(max-width:550px){.grid2,.grid3{grid-template-columns:1fr}}
+  .mini-card{background:#f5f5f0;border-radius:8px;padding:0.6rem 0.75rem}
+  .mc-label{font-size:11px;font-weight:600;color:#888;margin-bottom:4px}
+  .mc-val{font-size:12px;color:#1a1a1a;line-height:1.55}
+  .row-item{display:flex;align-items:flex-start;gap:8px;margin-bottom:0.5rem}
+  .rnum{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;margin-top:1px;background:#E6F1FB;color:#185FA5}
+  .rtext{font-size:13px;color:#1a1a1a;line-height:1.6}
+  .rtext b{font-weight:600}
+  .divider{border:none;border-top:1px solid #e0e0d8;margin:0.7rem 0}
+  .pill-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:0.4rem}
+  .pill{font-size:11px;padding:3px 9px;border-radius:99px;font-weight:500;border:1px solid}
+  .pp{background:#EEEDFE;color:#3C3489;border-color:#AFA9EC}
+  .pt{background:#E1F5EE;color:#0F6E56;border-color:#5DCAA5}
+  .pc{background:#FAECE7;color:#993C1D;border-color:#F0997B}
+  .pb{background:#E6F1FB;color:#185FA5;border-color:#85B7EB}
+  .pg{background:#EAF3DE;color:#3B6D11;border-color:#97C459}
+  .pa{background:#FAEEDA;color:#854F0B;border-color:#EF9F27}
+  .warn-box{background:#FAEEDA;border-radius:8px;padding:0.6rem 0.9rem;margin-bottom:0.6rem;border:1px solid #EF9F27}
+  .warn-label{font-size:11px;font-weight:600;color:#854F0B;margin-bottom:3px}
+  .warn-text{font-size:13px;color:#633806;line-height:1.6}
+  .section-label{font-size:12px;font-weight:600;color:#888;margin-bottom:0.4rem;margin-top:0.6rem}
+  .matrix{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0.4rem 0}
+  .m-cell{border-radius:8px;padding:0.55rem 0.7rem;font-size:12px;line-height:1.5}
+  .m-do{background:#E1F5EE;color:#085041}
+  .m-plan{background:#E6F1FB;color:#0C447C}
+  .m-del{background:#FAEEDA;color:#633806}
+  .m-del2{background:#FCEBEB;color:#791F1F}
+  .m-cell b{font-weight:600;display:block;font-size:11px;margin-bottom:2px}
+  .arrow-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:0.5rem}
+  .arrow-step{font-size:12px;padding:3px 8px;background:#f5f5f0;border-radius:6px;color:#1a1a1a}
+  .arrow-sep{font-size:12px;color:#aaa}
+</style>
 </head>
 <body>
+<div class="wrap">
+<p class="page-title">Imtihon uchun to'liq tayyorgarlik</p>
+<p class="page-sub">Akademik ko'nikmalar va kasbiy kompetentlik — barcha muhim mavzular</p>
 
-  <!-- Навигация -->
-  <header class="navbar">
-    <div class="logo">
-      <i class="bi bi-play-btn-fill"></i>
-      Dorama.land
+<div class="topic">
+  <div class="topic-header">
+    <div class="num-badge nb-p">1</div>
+    <div>
+      <div class="topic-title">Kompetensiya va kompetentlik tushunchalari</div>
+      <div class="topic-sub">Asosiy ta'riflar — imtihonda albatta so'raladi</div>
     </div>
-    <nav class="nav-links">
-      <a href="#">новые серии</a>
-      <a href="#">все дорамы</a>
-      <a href="#">фильмы</a>
-      <a href="#">расписание</a>
-      <a href="#">подборки</a>
-    </nav>
-    <div class="nav-icons">
-      <i class="bi bi-grid-fill"></i>
-      <i class="bi bi-search"></i>
-    </div>
-  </header>
-
-  <!-- Заголовок -->
-  <h1>Дорама</h1>
-
-  <!-- Карточки дорам -->
-  <div class="manga-grid">
-
-    <!-- Card 1 -->
-    <a href="anime-details.html" class="manga-card">
-      <img src="https://avatars.mds.yandex.net/i?id=2a0000019791079599171e0222123ac5ea6f-1412630-fast-images&n=13" alt="Покорение Его Высочества">
-      <div class="manga-info">
-        <h3>Покорение Его Высочества</h3>
-        <h5>6-серия</h5>
-        <span class="rating">★ 4.9</span>
-      </div>
-    </a>
-
-    <!-- Card 2 -->
-    <a href="anime-details.html" class="manga-card">
-      <img src="https://avatars.mds.yandex.net/i?id=f2d0115ff6c63ec1e6adce479b041d2f04e288a4-6254930-images-thumbs&n=13" alt="Охотник со скальпелем">
-      <div class="manga-info">
-        <h3>Охотник со скальпелем</h3>
-        <h5>7-серия</h5>
-        <span class="rating">★ 4.9</span>
-      </div>
-    </a>
-
-    <!-- Card 3 -->
-    <a href="anime-details.html" class="manga-card">
-      <img src="https://avatars.mds.yandex.net/i?id=a4f97bf45df3ebc83097cdcc359eea2476d88791-8228018-images-thumbs&n=13" alt="Нокут">
-      <div class="manga-info">
-        <h3>Нокут</h3>
-        <h5>6-серия</h5>
-        <span class="rating">★ 4.9</span>
-      </div>
-    </a>
-
-    <a href="anime-details.html" class="manga-card">
-        <img src="https://avatars.mds.yandex.net/i?id=1d7844c4119e38f29a5e2c716e504d663a5b8b47-5447131-images-thumbs&n=13" alt="Выходи замуж за моего супруга (японская версия)">
-        <div class="manga-info">
-          <h3>Выходи замуж за моего супруга (японская версия)</h3>
-          <h5>6-серия</h5>
-          <span class="rating">★ 4.9</span>
-        </div>
-    </a>
-
-    <!-- Card 5 -->
-    <a href="anime-details.html" class="manga-card">
-        <img src="https://avatars.mds.yandex.net/i?id=c3275918ac0183c1e72db2846ddda9347e3d1829-5657257-images-thumbs&n=13" alt="Неизвестный Сеул">
-        <div class="manga-info">
-          <h3>Неизвестный Сеул</h3>
-          <h5>9-серия</h5>
-          <span class="rating">★ 4.9</span>
-        </div>
-      </a>
-    
-    <!-- Card 6 -->
-    <a href="anime-details.html" class="manga-card">
-        <img src="https://avatars.mds.yandex.net/i?id=cf103df373c1394d1f8d0e7937418558f2531213-5230232-images-thumbs&n=13" alt="обязанности после школы дорама">
-        <div class="manga-info">
-          <h3>обязанности после школы дорама</h3>
-          <h5>12-серия</h5>
-          <span class="rating">★ 4.9</span>
-        </div>
-    </a>  
-
-    <!-- Card 7 -->
-    <a href="anime-details.html" class="manga-card">
-        <img src="https://avatars.mds.yandex.net/i?id=0431ada78aee1f029609173995e45a1456c2b12b-5235083-images-thumbs&n=13" alt="Паразить">
-        <div class="manga-info">
-          <h3>Паразить</h3>
-          <h5>12-серия</h5>
-          <span class="rating">★ 4.9</span>
-        </div>
-    </a>
-    
-    <!-- Card 8 -->
-    <a href="anime-details.html" class="manga-card">
-        <img src="https://avatars.mds.yandex.net/i?id=396bd061b2f483ac479799ff2863dfaf482e0173-11917684-images-thumbs&n=13" alt="Слабый герой">
-        <div class="manga-info">
-          <h3>Слабый герой</h3>
-          <h5>12-серия</h5>
-          <span class="rating">★ 5.0</span>
-        </div>
-    </a>
-    
-    <!-- Card 6 -->
-    <a href="anime-details.html" class="manga-card">
-        <img src="https://avatars.mds.yandex.net/i?id=f4f1a1db868d79834fc76c8dbee44537410b221b-5250085-images-thumbs&n=13" alt="3 лица">
-        <div class="manga-info">
-          <h3>ведь от третьего лица</h3>
-          <h5>12-серия</h5>
-          <span class="rating">★ 4.9</span>
-        </div>
-    </a>
-    
-    <!-- Card 6 -->
-    <a href="anime-details.html" class="manga-card">
-        <img src="https://avatars.mds.yandex.net/i?id=c94249384388399219d66c3dc7168308deba0614-3809909-images-thumbs&n=13" alt="ламп">
-        <div class="manga-info">
-          <h3>магазин ламп</h3>
-          <h5>12-серия</h5>
-          <span class="rating">★ 4.9</span>
-        </div>
-    </a>  
-
-      
-
   </div>
+  <div class="topic-body">
+    <div class="def-block">
+      <div class="def-label">Kompetensiya</div>
+      <div class="def-text">Qonun yoki hujjatlar orqali belgilangan <b>vakolatlar doirasi</b>; muayyan soha bo'yicha bilim va tajriba.</div>
+    </div>
+    <div class="def-block">
+      <div class="def-label">Kompetentlik</div>
+      <div class="def-text">Faoliyatda nazariy bilimlardan <b>samarali foydalanish</b>, yuqori darajadagi kasbiy mahorat va iqtidorni namoyon eta olish qobiliyati.</div>
+    </div>
+    <div class="def-block">
+      <div class="def-label">Kasbiy kompetentlik</div>
+      <div class="def-text">Mutaxassis tomonidan kasbiy faoliyatni amalga oshirish uchun zarur <b>bilim, ko'nikma va malakalarni</b> egallab, ularni amalda yuqori darajada qo'llay olish.</div>
+    </div>
+    <div class="section-label">Kasbiy kompetentlik quyidagi holatlarda yaqqol namoyon bo'ladi:</div>
+    <div class="pill-row">
+      <span class="pill pp">Murakkab jarayonlarda</span>
+      <span class="pill pt">Noaniq vazifalar</span>
+      <span class="pill pc">Bir-biriga zid ma'lumotlar</span>
+      <span class="pill pb">Kutilmagan vaziyatlarda</span>
+    </div>
+  </div>
+</div>
 
+<div class="topic">
+  <div class="topic-header">
+    <div class="num-badge nb-p">2</div>
+    <div>
+      <div class="topic-title">Kasbiy kompetentlikning 5 ta asosiy sifati</div>
+      <div class="topic-sub">Barchasini nomini va ta'rifini bilish shart</div>
+    </div>
+  </div>
+  <div class="topic-body">
+    <div class="row-item"><div class="rnum">1</div><div class="rtext"><b>Ijtimoiy kompetentlik</b> — ijtimoiy munosabatlarda faollik, kasbiy faoliyatda sub'ektlar bilan muloqotga kirisha olish.</div></div>
+    <div class="row-item"><div class="rnum">2</div><div class="rtext"><b>Maxsus kompetentlik</b> — kasbiy-pedagogik faoliyatni tashkil etish. O'z ichiga 6 ta kichik kompetentlikni oladi (quyida).</div></div>
+    <div class="row-item"><div class="rnum">3</div><div class="rtext"><b>Shaxsiy kompetentlik</b> — izchil ravishda kasbiy o'sishga erishish, malaka darajasini oshirib borish.</div></div>
+    <div class="row-item"><div class="rnum">4</div><div class="rtext"><b>Texnologik kompetentlik</b> — ilg'or texnologiyalarni o'zlashtirish, zamonaviy vositalardan foydalana olish.</div></div>
+    <div class="row-item"><div class="rnum">5</div><div class="rtext"><b>Ekstremal kompetentlik</b> — favqulodda vaziyatlar va nizolarda oqilona qaror qabul qila olish.</div></div>
+    <div class="divider"></div>
+    <div class="warn-box">
+      <div class="warn-label">Muhim — "Maxsus kompetentlik" tarkibidagi 6 kichik kompetentlik</div>
+      <div class="warn-text">Psixologik · Metodik · Informatsion · Kreativ · Innovatsion · Kommunikativ</div>
+    </div>
+  </div>
+</div>
+
+<div class="topic">
+  <div class="topic-header">
+    <div class="num-badge nb-t">3</div>
+    <div>
+      <div class="topic-title">Kreativ fikrlash (5-mavzu)</div>
+      <div class="topic-sub">Kreativlik, divergent va konvergent tafakkur</div>
+    </div>
+  </div>
+  <div class="topic-body">
+    <div class="def-block">
+      <div class="def-label">Kreativlik nima?</div>
+      <div class="def-text">Individning <b>yangi g'oyalarni ishlab chiqarishga</b> tayyorligini tavsiflovchi ijodiy qobiliyat. Iqtidorlilik tarkibiga kiradi.</div>
+    </div>
+    <div class="grid2">
+      <div class="mini-card">
+        <div class="mc-label">Divergent tafakkur</div>
+        <div class="mc-val">Ko'plab, turli xil g'oyalar yaratish qobiliyati. Kreativlikning asosi. Erkin tasavvurni ochadi.</div>
+      </div>
+      <div class="mini-card">
+        <div class="mc-label">Konvergent tafakkur</div>
+        <div class="mc-val">Yaratilgan g'oyalar ichidan <b>eng maqbulini</b> tanlab olish. Qaror qabul qilishda tartib beradi.</div>
+      </div>
+    </div>
+    <div class="arrow-row">
+      <span class="arrow-step">Ko'plab g'oya yaratish</span>
+      <span class="arrow-sep">→</span>
+      <span class="arrow-step">Tahlil qilish</span>
+      <span class="arrow-sep">→</span>
+      <span class="arrow-step">Eng yaxshisini tanlash</span>
+      <span class="arrow-sep">→</span>
+      <span class="arrow-step">Amaliyot</span>
+    </div>
+    <div class="section-label">Kreativlikka to'sqinlik qiluvchi omillar:</div>
+    <div class="pill-row">
+      <span class="pill pc">Tavakkaldan qochish</span>
+      <span class="pill pc">Boshqalarga tobe bo'lish</span>
+      <span class="pill pc">Faqat yutuqni o'ylash</span>
+      <span class="pill pc">Fantaziyani past baholash</span>
+    </div>
+    <div class="section-label" style="margin-top:0.6rem">Kreativ potensial sifatlari:</div>
+    <div class="pill-row">
+      <span class="pill pp">Tafakkur tezkorligi</span>
+      <span class="pill pp">Egiluvchanlik</span>
+      <span class="pill pp">O'ziga xoslik</span>
+      <span class="pill pp">Tashabbuskorlik</span>
+      <span class="pill pp">Zakovatlilik</span>
+    </div>
+  </div>
+</div>
+
+<div class="topic">
+  <div class="topic-header">
+    <div class="num-badge nb-c">4</div>
+    <div>
+      <div class="topic-title">Tanqidiy o'qish, eslatmalar, jamoda ishlash (6-mavzu)</div>
+      <div class="topic-sub">3 ta asosiy akademik ko'nikma</div>
+    </div>
+  </div>
+  <div class="topic-body">
+    <div class="def-block">
+      <div class="def-label">Tanqidiy o'qish nima?</div>
+      <div class="def-text">Matnni shunchaki o'qish emas — <b>chuqur tahlil qilish</b>, muallifning asosiy g'oyasini aniqlash, dalillarni baholash, xulosaga kelish jarayoni.</div>
+    </div>
+    <div class="section-label">Tanqidiy o'qish bosqichlari:</div>
+    <div class="arrow-row">
+      <span class="arrow-step">Tayyorgarlik</span>
+      <span class="arrow-sep">→</span>
+      <span class="arrow-step">Tushunish</span>
+      <span class="arrow-sep">→</span>
+      <span class="arrow-step">Tahlil</span>
+      <span class="arrow-sep">→</span>
+      <span class="arrow-step">Solishtirish</span>
+      <span class="arrow-sep">→</span>
+      <span class="arrow-step">Xulosa</span>
+    </div>
+    <div class="divider"></div>
+    <div class="def-block">
+      <div class="def-label">Eslatmalar usullari (Note-taking)</div>
+      <div class="def-text"><b>Konspekt</b> — muhim fikrlarni qisqacha bayon · <b>Jadval</b> — g'oyalar tartib bilan · <b>Mind-map</b> — aqliy xarita · <b>Cornell usuli</b> — sahifa 3 qismga bo'linadi (savollar / ma'lumot / xulosa)</div>
+    </div>
+    <div class="divider"></div>
+    <div class="section-label">Jamoda ishlash ko'nikmalari:</div>
+    <div class="pill-row">
+      <span class="pill pb">Muloqot</span>
+      <span class="pill pb">Hamkorlik</span>
+      <span class="pill pb">Mas'uliyat</span>
+      <span class="pill pb">Muammolarni hal qilish</span>
+      <span class="pill pb">Liderlik</span>
+    </div>
+    <div class="section-label" style="margin-top:0.6rem">Boshqaruv uslublari:</div>
+    <div class="grid3">
+      <div class="mini-card">
+        <div class="mc-label">Avtoritar</div>
+        <div class="mc-val">Qarorlar mustaqil qabul qilinadi. Tezkor, lekin ijodkorlik susayadi.</div>
+      </div>
+      <div class="mini-card">
+        <div class="mc-label">Demokratik</div>
+        <div class="mc-val">Muhokama va kelishuv asosida. Ishtirok va mas'uliyat yuqori.</div>
+      </div>
+      <div class="mini-card">
+        <div class="mc-label">Liberal</div>
+        <div class="mc-val">Rahbar aralashuvi minimal. Erkinlik yuqori, nazorat sust.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="topic">
+  <div class="topic-header">
+    <div class="num-badge nb-b">5</div>
+    <div>
+      <div class="topic-title">Kasbiy kompetensiyalarni baholash usullari (7-mavzu)</div>
+      <div class="topic-sub">Metodologiya, mezonlar va baholash texnologiyalari</div>
+    </div>
+  </div>
+  <div class="topic-body">
+    <div class="section-label">4 ta metodologik yondashuv:</div>
+    <div class="grid2">
+      <div class="mini-card"><div class="mc-label">Kognitiv</div><div class="mc-val">Nazariy bilimlar, terminologiya darajasini aniqlash</div></div>
+      <div class="mini-card"><div class="mc-label">Amaliy</div><div class="mc-val">Bilim va ko'nikmalarni mehnat faoliyatida qo'llash qobiliyati</div></div>
+      <div class="mini-card"><div class="mc-label">Integrativ</div><div class="mc-val">Bilim + ko'nikma + motivatsiya + qadriyatlarni birga baholash</div></div>
+      <div class="mini-card"><div class="mc-label">Kompetensiyaga asoslangan</div><div class="mc-val">Aniq mezonlar va indikatorlarga tayangan tizim</div></div>
+    </div>
+    <div class="divider"></div>
+    <div class="section-label">5 ta baholash mezoni:</div>
+    <div class="pill-row">
+      <span class="pill pp">Bilim komponenti</span>
+      <span class="pill pt">Amaliy komponent</span>
+      <span class="pill pb">Kommunikativ</span>
+      <span class="pill pa">Innovatsion</span>
+      <span class="pill pc">Shaxsiy</span>
+    </div>
+    <div class="divider"></div>
+    <div class="grid3">
+      <div class="mini-card">
+        <div class="mc-label">An'anaviy usullar</div>
+        <div class="mc-val">Test · Og'zaki savol-javob · Esse · Referat</div>
+      </div>
+      <div class="mini-card">
+        <div class="mc-label">Amaliy usullar</div>
+        <div class="mc-val">Kuzatuv · Work sample · Keys-stadi</div>
+      </div>
+      <div class="mini-card">
+        <div class="mc-label">Zamonaviy usullar</div>
+        <div class="mc-val">Portfolio · 360° feedback · Assessment center · E-assessment</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="topic">
+  <div class="topic-header">
+    <div class="num-badge nb-g">6</div>
+    <div>
+      <div class="topic-title">Time Management — vaqtni samarali boshqarish (11-mavzu)</div>
+      <div class="topic-sub">6 ta asosiy usul — barchasini bilish kerak</div>
+    </div>
+  </div>
+  <div class="topic-body">
+    <div class="def-block">
+      <div class="def-label">Time Management nima?</div>
+      <div class="def-text">Vazifalarni rejalashtirish, vaqtni samarali taqsimlash va ustuvorliklarni belgilash jarayoni.</div>
+    </div>
+    <div class="row-item"><div class="rnum">1</div><div class="rtext"><b>SMART maqsad qo'yish</b> — Specific (aniq) · Measurable (o'lchovli) · Achievable (erishish mumkin) · Relevant (maqsadga mos) · Time-bound (muddatli)</div></div>
+    <div class="row-item"><div class="rnum">2</div><div class="rtext"><b>Eyzengauer matritsasi</b> — ishlarni 4 toifaga bo'lish (quyida ko'rsatilgan)</div></div>
+    <div class="matrix">
+      <div class="m-cell m-do"><b>Muhim + Shoshilinch</b>Darhol bajar</div>
+      <div class="m-cell m-plan"><b>Muhim + Shoshilinch emas</b>Rejalashtir</div>
+      <div class="m-cell m-del"><b>Shoshilinch + Muhim emas</b>Delegatsiya qil</div>
+      <div class="m-cell m-del2"><b>Muhim ham emas + Shoshilinch ham emas</b>Chiqarib tashla</div>
+    </div>
+    <div class="row-item"><div class="rnum">3</div><div class="rtext"><b>Pomodoro texnikasi</b> — 25 daqiqa ish + 5 daqiqa tanaffus. 4 ta sikldan keyin 15–20 daqiqalik katta tanaffus.</div></div>
+    <div class="row-item"><div class="rnum">4</div><div class="rtext"><b>Time Blocking</b> — kunni bloklarga bo'lish: e-mail uchun alohida vaqt, diqqat talab ishlarga alohida blok.</div></div>
+    <div class="row-item"><div class="rnum">5</div><div class="rtext"><b>2 daqiqa qoidasi</b> (David Allen) — agar ish 2 daqiqada bajarilsa, hoziroq bajar, kechiktirma.</div></div>
+    <div class="row-item"><div class="rnum">6</div><div class="rtext"><b>Delegatsiya</b> — barcha ishni o'zingiz qilish shart emas. Kichik ishlarni topshiring, muhim ishlar uchun vaqt bo'shating.</div></div>
+    <div class="section-label" style="margin-top:0.3rem">Vaqtni yo'qotuvchi omillar:</div>
+    <div class="pill-row">
+      <span class="pill pc">Ijtimoiy tarmoqlar</span>
+      <span class="pill pc">Rejasiz ish boshlash</span>
+      <span class="pill pc">Ko'p vazifalilik</span>
+      <span class="pill pc">Ortiqcha majlislar</span>
+      <span class="pill pc">Stres va xavotir</span>
+    </div>
+  </div>
+</div>
+
+<div class="topic">
+  <div class="topic-header">
+    <div class="num-badge nb-a">!</div>
+    <div>
+      <div class="topic-title">Imtihonda so'raladigan asosiy savollar</div>
+      <div class="topic-sub">Amaliy topshiriq faylidan olingan</div>
+    </div>
+  </div>
+  <div class="topic-body">
+    <div class="warn-box">
+      <div class="warn-label">1-savol</div>
+      <div class="warn-text">"Akademik ko'nikmalar va kasbiy kompetentlik" fanining maqsadi va vazifalari nima?</div>
+    </div>
+    <div class="warn-box">
+      <div class="warn-label">2-savol</div>
+      <div class="warn-text">Kasbiy kompetentlikning asosiy sifatlari qaysilar va ularga ta'rif bering. (5 ta: ijtimoiy, maxsus, shaxsiy, texnologik, ekstremal)</div>
+    </div>
+    <div class="warn-box">
+      <div class="warn-label">3-savol</div>
+      <div class="warn-text">Qaysi kompetentlik sifati bir nechta kompetentlikdan iborat bo'ladi va ular qaysilar? (Javob: Maxsus kompetentlik — 6 ta: psixologik, metodik, informatsion, kreativ, innovatsion, kommunikativ)</div>
+    </div>
+  </div>
+</div>
+
+</div>
 </body>
 </html>
