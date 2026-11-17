@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e141b">
+<title>Робот Байт</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Golos+Text:wght@400;500;700&display=swap">
+<style>
+/* Layout: a single IDE-like column; level header, board, program editor, command palette, generated code */
+:root{
+  --bg:#0e141b;
+  --panel:#16202b;
+  --line:#253241;
+  --text:#dfe7ef;
+  --muted:#7d8fa3;
+  --kw:#c792ea;      /* function call */
+  --fn:#82aaff;      /* forward */
+  --str:#c3e88d;     /* turn left */
+  --num:#f78c6c;     /* turn right */
+  --bug:#ff5370;
+  --ok:#c3e88d;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --body:"Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:14px;
+  padding-block:16px 28px;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{font-family:var(--mono);font-weight:800;font-size:20px;letter-spacing:-.02em}
+.brand span{color:var(--fn)}
+.levels{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.lv{font-family:var(--mono);font-size:12px;font-weight:700;width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer;padding:0}
+.lv.done{color:var(--ok);border-color:rgba(195,232,141,.4)}
+.lv.cur{background:var(--fn);color:var(--bg);border-color:var(--fn)}
+.lv:disabled{opacity:.35;cursor:default}
+.task{display:flex;flex-direction:column;gap:4px}
+.task h1{margin:0;font-family:var(--mono);font-size:17px;font-weight:700;text-wrap:balance}
+.task h1 small{color:var(--muted);font-weight:500}
+.task p{margin:0;color:var(--muted);line-height:1.45;font-size:14px}
+.task p b{color:var(--text);font-weight:500}
+.boardbox{display:flex;justify-content:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.board{position:relative;display:grid}
+.cell{border-radius:6px;margin:2px;position:relative}
+.cell.floor{background:#1f2c3a;box-shadow:inset 0 0 0 1px #2a3a4c}
+.cell.floor::after{content:"";position:absolute;inset:40%;border-radius:2px;background:#2a3a4c}
+.bug{position:absolute;inset:16%;transition:transform .25s, opacity .25s}
+.bug.gone{transform:scale(0) rotate(90deg);opacity:0}
+.robot{position:absolute;left:0;top:0;transition:transform .3s cubic-bezier(.4,1.4,.6,1);z-index:2;pointer-events:none}
+.robot .body{width:100%;height:100%;transition:transform .3s ease}
+.robot.crash .body{animation:crash .4s}
+@keyframes crash{25%{filter:drop-shadow(0 0 8px var(--bug))}50%{transform:var(--rot) translateX(-4px)}75%{transform:var(--rot) translateX(4px)}}
+.editor{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.row{display:flex;flex-direction:column;gap:6px;border-radius:10px;padding:8px;border:1px solid transparent;cursor:pointer}
+.row.active{border-color:var(--fn);background:rgba(130,170,255,.06)}
+.rowhead{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.rowhead b{color:var(--text)}
+.slots{display:flex;flex-wrap:wrap;gap:6px}
+.slot{width:40px;height:40px;border-radius:9px;border:1px dashed #33465a;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:800;font-size:19px;background:none;color:var(--text);padding:0}
+.slot.filled{border-style:solid;cursor:pointer}
+.slot.exec{outline:2px solid #fff;outline-offset:2px}
+.c-f{color:var(--fn);border-color:var(--fn)!important;background:rgba(130,170,255,.12)}
+.c-l{color:var(--str);border-color:var(--str)!important;background:rgba(195,232,141,.1)}
+.c-r{color:var(--num);border-color:var(--num)!important;background:rgba(247,140,108,.1)}
+.c-p{color:var(--kw);border-color:var(--kw)!important;background:rgba(199,146,234,.12)}
+.palette{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cmd{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:12px;border:1.5px solid;font-family:var(--mono);cursor:pointer}
+.cmd .ic{font-size:22px;font-weight:800;line-height:1}
+.cmd .nm{font-size:11px;font-family:var(--body)}
+.cmd:disabled{opacity:.35;cursor:default}
+.actions{display:grid;grid-template-columns:2fr 1fr;gap:8px}
+.btn{font-family:var(--mono);font-weight:700;font-size:16px;padding:14px;border-radius:12px;border:0;cursor:pointer}
+.run{background:var(--ok);color:var(--bg)}
+.run.stop{background:var(--bug);color:#fff}
+.clear{background:var(--panel);color:var(--text);border:1px solid var(--line)}
+button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.status{font-family:var(--mono);font-size:13px;min-height:20px;color:var(--muted)}
+.status.err{color:var(--bug)}
+.status.ok{color:var(--ok)}
+pre.code{margin:0;background:#0a0f14;border:1px solid var(--line);border-radius:12px;padding:12px;font-family:var(--mono);font-size:13px;line-height:1.6;overflow-x:auto;color:var(--muted)}
+.code .k{color:var(--kw)} .code .f{color:var(--fn)} .code .s{color:var(--str)} .code .n{color:var(--num)} .code .c{color:#546e7a;font-style:italic}
+.modal{position:fixed;inset:0;background:rgba(5,8,12,.7);display:flex;align-items:center;justify-content:center;z-index:10;
+  padding-block:24px;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
+.mcard{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px;max-width:340px;width:100%;display:flex;flex-direction:column;gap:12px;text-align:center}
+.mcard .big{font-family:var(--mono);font-size:22px;font-weight:800;color:var(--ok)}
+.mcard p{margin:0;color:var(--muted);line-height:1.5}
+.stars{font-size:28px;letter-spacing:6px;color:#ffcb6b}
+@media (prefers-reduced-motion: reduce){.robot,.robot .body,.bug{transition:none}.robot.crash .body{animation:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="brand">робот<span>.байт</span>()</div>
+    <div class="levels" id="levels"></div>
+  </header>
+
+  <section class="task">
+    <h1 id="title"></h1>
+    <p id="desc"></p>
+  </section>
+
+  <div class="boardbox"><div class="board" id="board"></div></div>
+
+  <div class="status" id="status">Собери программу и нажми «Запуск».</div>
+
+  <section class="editor">
+    <div class="row active" id="rowMain">
+      <div class="rowhead"><b>main()</b><span id="cntMain"></span></div>
+      <div class="slots" id="slotsMain"></div>
+    </div>
+    <div class="row" id="rowFunc">
+      <div class="rowhead"><b>F()</b><span id="cntFunc"></span></div>
+      <div class="slots" id="slotsFunc"></div>
+    </div>
+    <div class="palette">
+      <button class="cmd c-f" data-cmd="f"><span class="ic">↑</span><span class="nm">вперёд</span></button>
+      <button class="cmd c-l" data-cmd="l"><span class="ic">↺</span><span class="nm">налево</span></button>
+      <button class="cmd c-r" data-cmd="r"><span class="ic">↻</span><span class="nm">направо</span></button>
+      <button class="cmd c-p" data-cmd="p" id="cmdP"><span class="ic">F</span><span class="nm">вызов F</span></button>
+    </div>
+    <div class="actions">
+      <button class="btn run" id="runBtn">▶ Запуск</button>
+      <button class="btn clear" id="clearBtn">Очистить</button>
+    </div>
+  </section>
+
+  <pre class="code" id="code"></pre>
+</div>
+
+<div class="modal" id="win" hidden>
+  <div class="mcard">
+    <div class="stars" id="stars">★★★</div>
+    <div class="big">Все баги исправлены!</div>
+    <p id="winText"></p>
+    <button class="btn run" id="nextBtn">Следующий уровень →</button>
+  </div>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+
+/* Levels: '#' = empty, '.' = floor, 'B' = bug. dir: 0 up, 1 right, 2 down, 3 left */
+function stairs(n){
+  const g = [];
+  for (let r=0;r<n;r++){
+    let s = '';
+    for (let c=0;c<n;c++) s += (c===r ? (r>0?'B':'.') : (c===r+1 ? '.' : '#'));
+    g.push(s);
+  }
+  return g;
+}
+const LEVELS = [
+  { name:'Первый шаг', grid:['....B'], start:[0,0,1], main:6, func:0, best:4,
+    desc:'Программа — это список команд, которые робот выполняет <b>по порядку</b>. Доведи Байта до бага.' },
+  { name:'Поворот', grid:['....','###.','###.','###B'], start:[0,0,1], main:8, func:0, best:7,
+    desc:'Команды <b>налево</b> и <b>направо</b> поворачивают робота на месте. Шаг он делает только командой «вперёд».' },
+  { name:'Два бага', grid:['..B..','####.','B....'], start:[0,0,1], main:12, func:0, best:12,
+    desc:'Уровень пройден, когда собраны <b>все</b> баги. Если робот шагнёт в пустоту, программа упадёт с ошибкой.' },
+  { name:'Функция', grid:['........B'], start:[0,0,1], main:3, func:4, best:6,
+    desc:'Ячеек в main() мало. Запиши повторяющиеся команды в <b>F()</b> и вызови её несколько раз командой «F».' },
+  { name:'Лестница', grid:['..###','#B.##','##B.#','###B.','####B'], start:[0,0,1], main:4, func:4, best:8,
+    desc:'Найди повторяющийся кусок пути, вынеси его в функцию и вызывай её столько раз, сколько нужно.' },
+  { name:'Рекурсия', grid:stairs(7), start:[0,0,1], main:1, func:5, best:6,
+    desc:'В main() всего одна ячейка. Функция может <b>вызывать сама себя</b>. Программа остановится, когда последний баг будет собран.' },
+  { name:'Периметр', grid:['....B','.###.','.###.','.###.','B...B'], start:[0,0,1], main:3, func:5, best:8,
+    desc:'Обойди плату по краю. Подумай, какая часть пути повторяется на каждой стороне.' },
+  { name:'Змейка', grid:['....B','.....','B....','.....','....B'], start:[0,0,1], main:11, func:4, best:15,
+    desc:'Финальный уровень. Баги разбросаны змейкой: удастся уложиться в ячейки main() и F()?' }
+];
+
+const CMDS = {
+  f:{ ic:'↑', cls:'c-f', code:'<span class="f">вперёд</span>();' },
+  l:{ ic:'↺', cls:'c-l', code:'<span class="s">налево</span>();' },
+  r:{ ic:'↻', cls:'c-r', code:'<span class="n">направо</span>();' },
+  p:{ ic:'F', cls:'c-p', code:'<span class="k">F</span>();' }
+};
+const DR = [-1,0,1,0], DC = [0,1,0,-1];
+
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e) { return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e) {} }
+};
+let done = {};
+try { done = JSON.parse(store.get('bajt-done') || '{}') || {}; } catch(e) { done = {}; }
+
+let lvIdx = 0, L, prog = { main:[], func:[] }, active = 'main';
+const saved = {};
+let bugs, robot, cell = 48, running = false, timer = null, runId = 0;
+
+/* ---------- sound ---------- */
+let ac = null;
+function beep(f, d, type='square', vol=.03){
+  try {
+    if (!ac) ac = new (window.AudioContext||window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    const t0 = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(.0001, t0+d);
+    o.connect(g).connect(ac.destination); o.start(t0); o.stop(t0+d+.02);
+  } catch(e) {}
+}
+
+/* ---------- svg art ---------- */
+const BUG_SVG = `<svg viewBox="0 0 40 40" class="bug"><g stroke="#ff5370" stroke-width="2.5" stroke-linecap="round"><path d="M9 14l-5-3M31 14l5-3M8 22H3M32 22h5M9 30l-5 3M31 30l5 3M16 9l-3-5M24 9l3-5"/></g><ellipse cx="20" cy="22" rx="11" ry="13" fill="#ff5370"/><path d="M20 10v25" stroke="#0e141b" stroke-width="2"/><circle cx="15" cy="20" r="2.5" fill="#0e141b"/><circle cx="25" cy="26" r="2.5" fill="#0e141b"/><circle cx="16" cy="29" r="2" fill="#0e141b"/></svg>`;
+const ROBOT_SVG = `<svg viewBox="0 0 40 40" class="body"><path d="M20 1l5 6h-10z" fill="#82aaff"/><rect x="7" y="8" width="26" height="26" rx="8" fill="#82aaff"/><rect x="11" y="13" width="18" height="11" rx="4" fill="#0e141b"/><circle cx="16" cy="18.5" r="2.4" fill="#c3e88d"/><circle cx="24" cy="18.5" r="2.4" fill="#c3e88d"/><rect x="14" y="28" width="12" height="2.5" rx="1.2" fill="#0e141b"/></svg>`;
+
+/* ---------- level ---------- */
+function loadLevel(i){
+  stop();
+  saved[lvIdx] = prog;
+  lvIdx = i; L = LEVELS[i];
+  prog = saved[i] || { main:[], func:[] };
+  active = 'main';
+  $('title').innerHTML = `${i+1}. ${L.name} <small>// уровень ${i+1} из ${LEVELS.length}</small>`;
+  $('desc').innerHTML = L.desc;
+  $('rowFunc').hidden = !L.func;
+  $('cmdP').disabled = !L.func;
+  setStatus('Собери программу и нажми «Запуск».');
+  renderLevels(); resetBoard(); renderProg();
+}
+
+function renderLevels(){
+  const box = $('levels'); box.innerHTML = '';
+  LEVELS.forEach((lv, i) => {
+    const b = document.createElement('button');
+    b.className = 'lv' + (done[i] ? ' done' : '') + (i === lvIdx ? ' cur' : '');
+    b.textContent = i+1;
+    b.disabled = i > 0 && !done[i-1] && !done[i];
+    b.setAttribute('aria-label', 'Уровень ' + (i+1));
+    b.onclick = () => loadLevel(i);
+    box.appendChild(b);
+  });
+}
+
+function resetBoard(){
+  const rows = L.grid.length, cols = L.grid[0].length;
+  const avail = Math.min(440, document.querySelector('.boardbox').clientWidth - 30);
+  cell = Math.floor(Math.min(56, avail / cols));
+  const b = $('board');
+  b.style.gridTemplateColumns = `repeat(${cols}, ${cell}px)`;
+  b.style.gridAutoRows = cell + 'px';
+  b.innerHTML = '';
+  bugs = new Map();
+  L.grid.forEach((row, r) => [...row].forEach((ch, c) => {
+    const d = document.createElement('div');
+    d.className = 'cell' + (ch !== '#' ? ' floor' : '');
+    if (ch === 'B'){ d.insertAdjacentHTML('beforeend', BUG_SVG); bugs.set(r+','+c, d.lastChild); }
+    b.appendChild(d);
+  }));
+  const rb = document.createElement('div');
+  rb.className = 'robot'; rb.id = 'robot';
+  rb.style.width = rb.style.height = cell + 'px';
+  rb.innerHTML = ROBOT_SVG;
+  b.appendChild(rb);
+  robot = { r: L.start[0], c: L.start[1], dir: L.start[2], rot: L.start[2]*90, el: rb };
+  placeRobot(true);
+}
+
+function placeRobot(instant){
+  const el = robot.el;
+  if (instant){ el.style.transition = 'none'; el.firstChild.style.transition = 'none'; }
+  el.style.transform = `translate(${robot.c*cell}px, ${robot.r*cell}px)`;
+  el.firstChild.style.transform = `rotate(${robot.rot}deg)`;
+  el.style.setProperty('--rot', `rotate(${robot.rot}deg)`);
+  if (instant){ el.offsetWidth; el.style.transition = ''; el.firstChild.style.transition = ''; }
+}
+
+/* ---------- editor ---------- */
+function renderProg(){
+  for (const key of ['main','func']){
+    const limit = key === 'main' ? L.main : L.func;
+    const box = $(key === 'main' ? 'slotsMain' : 'slotsFunc');
+    box.innerHTML = '';
+    for (let i=0;i<limit;i++){
+      const cmd = prog[key][i];
+      const s = document.createElement('button');
+      s.className = 'slot' + (cmd ? ' filled ' + CMDS[cmd].cls : '');
+      s.textContent = cmd ? CMDS[cmd].ic : '';
+      s.dataset.key = key; s.dataset.i = i;
+      s.setAttribute('aria-label', cmd ? 'Удалить команду' : 'Пустая ячейка');
+      s.onclick = e => {
+        e.stopPropagation();
+        if (running) return;
+        setActive(key);
+        if (prog[key][i]){ prog[key].splice(i,1); renderProg(); beep(300,.05); }
+      };
+      box.appendChild(s);
+    }
+    $(key === 'main' ? 'cntMain' : 'cntFunc').textContent = `${prog[key].length}/${limit}`;
+  }
+  $('rowMain').classList.toggle('active', active === 'main');
+  $('rowFunc').classList.toggle('active', active === 'func');
+  renderCode();
+}
+
+function renderCode(){
+  const body = list => list.length ? list.map(c => '  ' + CMDS[c].code).join('\n') : '  <span class="c">// пусто</span>';
+  let s = `<span class="k">function</span> <span class="f">main</span>() {\n${body(prog.main)}\n}`;
+  if (L.func) s += `\n\n<span class="k">function</span> <span class="k">F</span>() {\n${body(prog.func)}\n}`;
+  $('code').innerHTML = s;
+}
+
+function setActive(key){ if (key === 'func' && !L.func) return; active = key; renderProg(); }
+$('rowMain').onclick = () => !running && setActive('main');
+$('rowFunc').onclick = () => !running && setActive('func');
+
+document.querySelectorAll('.cmd').forEach(b => b.onclick = () => {
+  if (running) return;
+  const limit = active === 'main' ? L.main : L.func;
+  if (prog[active].length >= limit){
+    setStatus(`В ${active === 'main' ? 'main()' : 'F()'} больше нет места. Нажми на команду, чтобы удалить её.`, 'err');
+    beep(140,.12); return;
+  }
+  prog[active].push(b.dataset.cmd);
+  beep(520,.04);
+  renderProg();
+});
+
+$('clearBtn').onclick = () => { if (running) return; prog[active] = []; renderProg(); resetBoard(); setStatus('Очищено: ' + (active === 'main' ? 'main()' : 'F()')); };
+
+function setStatus(txt, kind){
+  const s = $('status'); s.textContent = txt; s.className = 'status' + (kind ? ' ' + kind : '');
+}
+
+/* ---------- interpreter ---------- */
+$('runBtn').onclick = () => running ? (stop(), resetBoard(), setStatus('Остановлено.')) : run();
+
+function run(){
+  if (!prog.main.length){ setStatus('main() пустая: добавь хотя бы одну команду.', 'err'); return; }
+  resetBoard();
+  running = true; const id = ++runId;
+  $('runBtn').textContent = '■ Стоп'; $('runBtn').classList.add('stop');
+  const stack = [{ key:'main', list: prog.main.slice(), i: 0 }];
+  let steps = 0;
+  setStatus('Выполняю…');
+  const tick = () => {
+    if (id !== runId) return;
+    clearExec();
+    while (stack.length && stack[stack.length-1].i >= stack[stack.length-1].list.length) stack.pop();
+    if (!stack.length){
+      fail(bugs.size ? `Программа завершилась, но осталось багов: ${bugs.size}.` : '');
+      return;
+    }
+    const fr = stack[stack.length-1];
+    const cmd = fr.list[fr.i];
+    markExec(fr.key, fr.i);
+    fr.i++;
+    if (++steps > 400){ fail('Слишком много шагов. Похоже на бесконечный цикл.'); return; }
+    if (cmd === 'p'){
+      if (stack.length > 60){ fail('Stack overflow: F() вызывает себя слишком глубоко.'); return; }
+      stack.push({ key:'func', list: prog.func.slice(), i: 0 });
+      beep(700,.05,'triangle');
+      timer = setTimeout(tick, 160);
+      return;
+    }
+    if (cmd === 'l'){ robot.dir = (robot.dir + 3) % 4; robot.rot -= 90; beep(420,.05); }
+    else if (cmd === 'r'){ robot.dir = (robot.dir + 1) % 4; robot.rot += 90; beep(460,.05); }
+    else {
+      const nr = robot.r + DR[robot.dir], nc = robot.c + DC[robot.dir];
+      const row = L.grid[nr];
+      if (!row || nc < 0 || nc >= row.length || row[nc] === '#'){
+        robot.el.classList.remove('crash'); robot.el.offsetWidth; robot.el.classList.add('crash');
+        fail('Ошибка: впереди пустота. Робот не может туда шагнуть.'); return;
+      }
+      robot.r = nr; robot.c = nc; beep(330,.04);
+      const key = nr + ',' + nc;
+      if (bugs.has(key)){ bugs.get(key).classList.add('gone'); bugs.delete(key); setTimeout(()=>beep(880,.08,'triangle',.05),120); }
+    }
+    placeRobot();
+    if (!bugs.size){ timer = setTimeout(() => win(), 380); return; }
+    timer = setTimeout(tick, 360);
+  };
+  timer = setTimeout(tick, 200);
+}
+
+function markExec(key, i){
+  const s = document.querySelector(`.slot[data-key="${key}"][data-i="${i}"]`);
+  if (s) s.classList.add('exec');
+}
+function clearExec(){ document.querySelectorAll('.slot.exec').forEach(s => s.classList.remove('exec')); }
+
+function stop(){
+  runId++; clearTimeout(timer); running = false; clearExec();
+  $('runBtn').textContent = '▶ Запуск'; $('runBtn').classList.remove('stop');
+}
+
+function fail(msg){
+  stop();
+  setStatus(msg + ' Исправь программу и попробуй снова.', 'err');
+  beep(150,.25,'sawtooth',.04);
+}
+
+function win(){
+  stop();
+  const used = prog.main.length + prog.func.length;
+  done[lvIdx] = true; store.set('bajt-done', JSON.stringify(done));
+  const stars = used <= L.best ? 3 : used <= L.best + 2 ? 2 : 1;
+  $('stars').textContent = '★'.repeat(stars) + '☆'.repeat(3-stars);
+  $('winText').textContent = `Команд использовано: ${used}. ` + (stars < 3 ? `Можно уложиться в ${L.best}.` : 'Самое короткое решение!');
+  const last = lvIdx === LEVELS.length - 1;
+  $('nextBtn').textContent = last ? 'Начать сначала' : 'Следующий уровень →';
+  $('win').hidden = false;
+  setStatus('Уровень пройден.', 'ok');
+  [523,659,784,1047].forEach((f,i) => setTimeout(() => beep(f,.15,'triangle',.05), i*90));
+  renderLevels();
+}
+$('nextBtn').onclick = () => {
+  $('win').hidden = true;
+  loadLevel(lvIdx === LEVELS.length - 1 ? 0 : lvIdx + 1);
+};
+
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (!running) resetBoard(); }, 150); });
+
+// start on the first unfinished level
+let startAt = 0;
+while (startAt < LEVELS.length - 1 && done[startAt]) startAt++;
+lvIdx = startAt;
+loadLevel(startAt);
+})();
+</script>
+</body>
+</html>
