@@ -93,6 +93,29 @@ ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
 .recap b{font-family:var(--mono);flex:none;width:18px}
 .shake{animation:shake .4s}
 @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.modes{display:grid;gap:10px}
+.mode{text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--text);font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.mode b{font-family:var(--mono);font-size:16px}
+.mode span{color:var(--muted);font-size:14px}
+.mode.main{border-color:var(--shield)}
+.back{align-self:flex-start;background:none;border:0;color:var(--muted);font-family:var(--mono);font-size:13px;cursor:pointer;padding:4px 0}
+.tasks{display:flex;flex-direction:column;gap:8px}
+.task{display:flex;gap:12px;align-items:center;text-align:left;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--text);font:inherit;cursor:pointer}
+.task .st{font-family:var(--mono);font-weight:700;width:22px;flex:none;color:var(--muted)}
+.task.done .st{color:var(--shield)}
+.task small{display:block;color:var(--muted)}
+.editor{position:relative;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#070c16}
+.editor .hd{font-family:var(--mono);font-size:11px;color:var(--muted);padding:6px 12px;border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.08em;display:flex;justify-content:space-between}
+textarea.code{width:100%;min-height:260px;resize:vertical;border:0;outline:0;background:transparent;color:var(--text);font-family:var(--mono);font-size:16px;line-height:1.5;padding:12px;white-space:pre;overflow:auto;tab-size:2}
+.keys{display:flex;gap:6px;overflow-x:auto;padding:8px;border-top:1px solid var(--line);background:var(--panel-2)}
+.keys button{flex:none;min-width:38px;height:36px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-family:var(--mono);font-size:15px;cursor:pointer;padding:0 8px}
+.row2{display:grid;grid-template-columns:2fr 1fr;gap:8px}
+.tests{display:flex;flex-direction:column;gap:6px}
+.test{display:flex;gap:10px;align-items:flex-start;font-size:14px;padding:8px 10px;border-radius:8px;background:var(--panel-2)}
+.test b{font-family:var(--mono);flex:none;width:18px}
+.test.ok b{color:var(--shield)} .test.bad b{color:var(--breach)}
+.test small{display:block;color:var(--muted)}
+.errbox{color:var(--breach);font-family:var(--mono);font-size:13px;white-space:pre-wrap}
 @media (prefers-reduced-motion: reduce){.shake{animation:none}.hp i{transition:none}}
 </style>
 </head>
@@ -300,9 +323,13 @@ function intro(){
     <p>После каждого инцидента будет разбор: <b>что написал хакер, почему это сработало, что было бы без защиты и как защищаться</b>.</p>
     <p class="muted">Ошибка снимает 25% защиты сервера. Если защита упадёт до нуля, сервер взломан.</p>
     <div class="law">Эти знания нужны для защиты. Атаковать чужие сайты и аккаунты без разрешения владельца нельзя: это уголовное преступление (ст. 272 УК РФ). Тренироваться можно только на своих учебных стендах и в CTF-соревнованиях.</div>
-    <button class="btn" id="go">Начать дежурство</button>
+    <div class="modes">
+      <button class="mode main" id="go"><b>▶ Дежурство</b><span>12 инцидентов: выбирай защиту, ищи уязвимости, распознавай фишинг.</span></button>
+      <button class="mode" id="ws"><b>⌨ Мастерская: пиши код защиты</b><span>6 заданий. Пишешь настоящий JavaScript, а игра запускает его и атакует.</span></button>
+    </div>
   </div>`;
   $('go').onclick = () => { i = 0; hp = 100; pts = 0; results = []; $('bar').hidden = false; show(); };
+  $('ws').onclick = workshop;
 }
 
 function show(){
@@ -393,9 +420,371 @@ function finish(){
     <h2>Шпаргалка защитника</h2>
     <div class="recap">${results.map(r => `<div><b style="color:${r.ok ? 'var(--shield)' : 'var(--breach)'}">${r.ok ? '✓' : '✗'}</b><span><b style="width:auto;font-family:var(--body)">${esc(r.topic)}:</b> ${esc(r.def)}</span></div>`).join('')}</div>
   </div>
-  <button class="btn" id="again">Новое дежурство</button>`;
+  <button class="btn" id="again">Новое дежурство</button>
+  <button class="btn ghost" id="toWs">⌨ Теперь напиши защиту сам: Мастерская</button>`;
   window.scrollTo(0,0);
   $('again').onclick = () => { i = 0; hp = 100; pts = 0; results = []; show(); };
+  $('toWs').onclick = workshop;
+}
+
+/* ================= МАСТЕРСКАЯ: пишешь настоящий код защиты ================= */
+/* Каждый тест — это атака или проверка. Тесты запускаются вместе с кодом игрока в отдельном Web Worker. */
+const TASKS = [
+{ id:'xss', topic:'XSS', title:'Экранирование HTML',
+  task:'Комментарии вставляются в страницу как HTML, поэтому хакер может прислать <script> и украсть сессии. Напиши escapeHtml(text): функция должна заменить опасные символы на HTML-сущности.',
+  starter:
+`// Замени опасные символы:
+//   &  →  &amp;
+//   <  →  &lt;
+//   >  →  &gt;
+//   "  →  &quot;
+//   '  →  &#39;
+function escapeHtml(text) {
+  return text; // сейчас текст вставляется как есть: это уязвимость
+}`,
+  hint:'Используй text.replace(/</g, "&lt;") для каждого символа. Заменяй & самым первым, иначе испортишь уже сделанные замены.',
+  tests:[
+    { n:'Атака: <script>alert(1)<\/script>', f:() => escapeHtml("<script>alert(1)</" + "script>") === "&lt;script&gt;alert(1)&lt;/script&gt;" },
+    { n:'Атака через атрибут: " onmouseover="…', f:() => escapeHtml('" onmouseover="steal()') === '&quot; onmouseover=&quot;steal()' },
+    { n:"Одинарные кавычки: it's", f:() => escapeHtml("it's") === "it&#39;s" },
+    { n:'Амперсанд: a & b', f:() => escapeHtml("a & b") === "a &amp; b" },
+    { n:'& заменяется первым: &lt; → &amp;lt;', f:() => escapeHtml("&lt;") === "&amp;lt;" },
+    { n:'Обычный текст не испорчен', f:() => escapeHtml("Привет, мир! 2+2=4") === "Привет, мир! 2+2=4" }
+  ],
+  solution:
+`function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")   // первым, иначе сломаем следующие замены
+    .replace(/</g, "&lt;")    // теперь браузер не увидит начало тега
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")  // защищает значения атрибутов
+    .replace(/'/g, "&#39;");
+}`,
+  py:
+`import html
+safe = html.escape(text, quote=True)  # в Python это уже есть в стандартной библиотеке`,
+  why:'Браузер видит &lt;script&gt; как обычный текст «<script>» и не запускает его. В реальных проектах используют готовые функции: textContent в JavaScript, автоэкранирование в шаблонах (Jinja2, React) и html.escape в Python.' },
+
+{ id:'pass', topic:'Пароли', title:'Проверка надёжности пароля',
+  task:'Пользователи ставят пароли вроде 123456, и брутфорс подбирает их за секунды. Напиши isStrongPassword(pw): функция возвращает true только для надёжного пароля.',
+  starter:
+`// Пароль надёжный, если:
+//   • длина не меньше 12 символов
+//   • есть строчная латинская буква (a-z)
+//   • есть заглавная латинская буква (A-Z)
+//   • есть цифра (0-9)
+//   • есть спецсимвол (всё, что не буква и не цифра)
+function isStrongPassword(pw) {
+  return pw.length > 0; // сейчас подходит любой пароль
+}`,
+  hint:'Проверяй каждое правило отдельно через регулярные выражения: /[a-z]/.test(pw), /[A-Z]/.test(pw), /[0-9]/.test(pw), /[^A-Za-z0-9]/.test(pw).',
+  tests:[
+    { n:'Отклонён «123456»', f:() => isStrongPassword("123456") === false },
+    { n:'Отклонён «password»', f:() => isStrongPassword("password") === false },
+    { n:'Отклонён короткий «Qw3rty!»', f:() => isStrongPassword("Qw3rty!") === false },
+    { n:'Отклонён без спецсимвола «Kotik2010Kotik»', f:() => isStrongPassword("Kotik2010Kotik") === false },
+    { n:'Отклонён без строчных «ALLCAPS-12345678»', f:() => isStrongPassword("ALLCAPS-12345678") === false },
+    { n:'Отклонён без цифр «Moy-Ryzhiy-Kot!»', f:() => isStrongPassword("Moy-Ryzhiy-Kot!") === false },
+    { n:'Принят «Moy-Kot-Ryzhik-2024»', f:() => isStrongPassword("Moy-Kot-Ryzhik-2024") === true },
+    { n:'Принят «Zebra#Tea7Rocket»', f:() => isStrongPassword("Zebra#Tea7Rocket") === true }
+  ],
+  solution:
+`function isStrongPassword(pw) {
+  if (pw.length < 12) return false;            // короткие перебираются быстро
+  if (!/[a-z]/.test(pw)) return false;         // строчная буква
+  if (!/[A-Z]/.test(pw)) return false;         // заглавная буква
+  if (!/[0-9]/.test(pw)) return false;         // цифра
+  if (!/[^A-Za-z0-9]/.test(pw)) return false;  // спецсимвол
+  return true;
+}`,
+  py:
+`import re
+def is_strong_password(pw):
+    return (len(pw) >= 12 and re.search(r"[a-z]", pw)
+            and re.search(r"[A-Z]", pw) and re.search(r"[0-9]", pw)
+            and re.search(r"[^A-Za-z0-9]", pw)) is not None`,
+  why:'Каждый символ длины умножает число вариантов для перебора, поэтому длина важнее всего. В реальных сервисах пароль ещё сверяют со списками утёкших паролей и обязательно включают двухфакторный вход.' },
+
+{ id:'limit', topic:'Брутфорс', title:'Лимит попыток входа',
+  task:'Хакер перебирает тысячи паролей в минуту. Напиши createLimiter(max): функция создаёт счётчик, который разрешает с одного IP не больше max попыток.',
+  starter:
+`// createLimiter(max) возвращает функцию allow(ip).
+// allow(ip) должна возвращать true, пока с этого ip
+// было не больше max попыток, а потом false.
+// У каждого ip свой счётчик.
+function createLimiter(max) {
+  return function allow(ip) {
+    return true; // сейчас можно пробовать бесконечно
+  };
+}`,
+  hint:'Создай объект const attempts = {} внутри createLimiter. В allow увеличивай attempts[ip] на 1 (сначала там undefined, поэтому пиши (attempts[ip] || 0) + 1) и возвращай attempts[ip] <= max.',
+  tests:[
+    { n:'Первые 5 попыток разрешены (max = 5)', f:() => { const a = createLimiter(5); let ok = true; for (let k = 0; k < 5; k++) ok = a("10.0.0.1") === true && ok; return ok; } },
+    { n:'6-я попытка заблокирована', f:() => { const a = createLimiter(5); for (let k = 0; k < 5; k++) a("10.0.0.1"); return a("10.0.0.1") === false; } },
+    { n:'Брутфорс: из 1000 попыток прошли только 5', f:() => { const a = createLimiter(5); let n = 0; for (let k = 0; k < 1000; k++) if (a("6.6.6.6")) n++; return n === 5; } },
+    { n:'Другой IP не блокируется из-за чужих попыток', f:() => { const a = createLimiter(3); for (let k = 0; k < 10; k++) a("6.6.6.6"); return a("10.0.0.2") === true; } },
+    { n:'У разных лимитеров свои счётчики', f:() => { const a = createLimiter(1), b = createLimiter(1); a("1.1.1.1"); return b("1.1.1.1") === true; } }
+  ],
+  solution:
+`function createLimiter(max) {
+  const attempts = {};                        // ip → число попыток
+  return function allow(ip) {
+    attempts[ip] = (attempts[ip] || 0) + 1;   // считаем попытку
+    return attempts[ip] <= max;               // больше max: блок
+  };
+}`,
+  py:
+`from collections import defaultdict
+def create_limiter(max_tries):
+    attempts = defaultdict(int)
+    def allow(ip):
+        attempts[ip] += 1
+        return attempts[ip] <= max_tries
+    return allow`,
+  why:'При лимите 5 попыток хакеру понадобятся годы, а не минуты. В реальных системах счётчик ещё сбрасывают со временем (например, раз в 15 минут), хранят его в Redis и добавляют капчу и двухфакторный вход.' },
+
+{ id:'sql', topic:'SQL-инъекция', title:'Параметризованный запрос',
+  task:'Логин вклеивается прямо в SQL, поэтому ввод admin\' -- открывает вход без пароля. Перепиши buildLoginQuery(login), чтобы функция возвращала запрос с ? и отдельный массив параметров.',
+  starter:
+`// Верни объект { sql, params }:
+//   sql    — текст запроса, где вместо значения стоит ?
+//   params — массив значений, которые база подставит сама
+function buildLoginQuery(login) {
+  return {
+    sql: "SELECT * FROM users WHERE login = '" + login + "'",
+    params: []
+  };
+}`,
+  hint:'sql должен быть ровно "SELECT * FROM users WHERE login = ?", а params равен [login]. Ввод пользователя вообще не должен попадать в строку sql.',
+  tests:[
+    { n:"Атака admin' -- не попала в текст запроса", f:() => !buildLoginQuery("admin' --").sql.includes("admin") },
+    { n:"Атака ' OR '1'='1 не попала в текст запроса", f:() => !buildLoginQuery("' OR '1'='1").sql.includes("OR") },
+    { n:'Запрос использует плейсхолдер ?', f:() => buildLoginQuery("anna").sql.replace(/\s+/g, " ").trim() === "SELECT * FROM users WHERE login = ?" },
+    { n:'Значение передаётся в params', f:() => { const q = buildLoginQuery("admin' --"); return Array.isArray(q.params) && q.params.length === 1 && q.params[0] === "admin' --"; } },
+    { n:'Обычный логин работает', f:() => buildLoginQuery("anna").params[0] === "anna" }
+  ],
+  solution:
+`function buildLoginQuery(login) {
+  return {
+    sql: "SELECT * FROM users WHERE login = ?",  // команда отдельно
+    params: [login]                              // данные отдельно
+  };
+}
+// потом: db.query(q.sql, q.params)`,
+  py:
+`cur.execute("SELECT * FROM users WHERE login = ?", (login,))
+# sqlite3 использует ?, psycopg2 (PostgreSQL) использует %s`,
+  why:'База получает команду и данные раздельно. Что бы ни ввёл хакер, это останется просто строкой для сравнения и никогда не выполнится как часть SQL. Это главная защита от SQL-инъекций.' },
+
+{ id:'path', topic:'Path traversal', title:'Безопасное имя файла',
+  task:'Сервис отдаёт файлы по имени, и запрос ../../etc/passwd читает системные файлы. Напиши safeFileName(name): функция возвращает имя, если оно безопасное, иначе null.',
+  starter:
+`// Безопасное имя:
+//   • только латинские буквы, цифры, точка, дефис и _
+//   • длина от 1 до 100
+//   • нет ".." (выход в папку выше)
+//   • не начинается с точки (скрытые файлы вроде .env)
+// Иначе верни null.
+function safeFileName(name) {
+  return name; // сейчас пропускается всё, даже ../../etc/passwd
+}`,
+  hint:'Сначала проверь регуляркой /^[A-Za-z0-9._-]{1,100}$/ (так сразу отсекаются / и \\), потом name.includes("..") и name.startsWith(".").',
+  tests:[
+    { n:'Атака ../../etc/passwd → null', f:() => safeFileName("../../etc/passwd") === null },
+    { n:'Атака ..\\..\\windows\\win.ini → null', f:() => safeFileName("..\\..\\windows\\win.ini") === null },
+    { n:'Абсолютный путь /etc/passwd → null', f:() => safeFileName("/etc/passwd") === null },
+    { n:'Скрытый файл .env с паролями → null', f:() => safeFileName(".env") === null },
+    { n:'Хитрая атака report..pdf/../x → null', f:() => safeFileName("report..pdf/../x") === null },
+    { n:'Пустое имя → null', f:() => safeFileName("") === null },
+    { n:'Обычный файл report.pdf проходит', f:() => safeFileName("report.pdf") === "report.pdf" },
+    { n:'photo_2024-01.jpg проходит', f:() => safeFileName("photo_2024-01.jpg") === "photo_2024-01.jpg" }
+  ],
+  solution:
+`function safeFileName(name) {
+  // белый список символов: / и \\ сюда не входят
+  if (!/^[A-Za-z0-9._-]{1,100}$/.test(name)) return null;
+  if (name.includes("..")) return null;    // выход из папки
+  if (name.startsWith(".")) return null;   // скрытые файлы
+  return name;
+}`,
+  py:
+`import os
+def safe_path(base, name):
+    path = os.path.realpath(os.path.join(base, name))
+    if not path.startswith(os.path.realpath(base) + os.sep):
+        return None   # путь вышел за пределы папки
+    return path`,
+  why:'Белый список (разрешено только то, что точно безопасно) надёжнее чёрного: хакер не сможет придумать символ, о котором ты забыл. Вторая линия защиты: проверить, что итоговый путь остаётся внутри разрешённой папки (пример на Python).' },
+
+{ id:'link', topic:'Фишинг', title:'Проверка ссылки из письма',
+  task:'Фишинговые письма ведут на домены вроде bank.ru.evil.top. Напиши isTrustedLink(url): функция доверяет только https-ссылкам на bank.ru и его поддомены.',
+  starter:
+`// Доверяем, если:
+//   • протокол https:
+//   • домен ровно bank.ru или заканчивается на .bank.ru
+// Если строка не ссылка, верни false (а не ошибку).
+// Подсказка: new URL(url).hostname и .protocol
+function isTrustedLink(url) {
+  return url.includes("bank.ru"); // хакер легко обманет такую проверку
+}`,
+  hint:'Оберни разбор в try { const u = new URL(url); … } catch { return false; }. Проверь u.protocol === "https:" и (u.hostname === "bank.ru" || u.hostname.endsWith(".bank.ru")).',
+  tests:[
+    { n:'https://bank.ru/login: доверяем', f:() => isTrustedLink("https://bank.ru/login") === true },
+    { n:'https://online.bank.ru: доверяем', f:() => isTrustedLink("https://online.bank.ru/pay") === true },
+    { n:'Атака: https://bank.ru.evil.top/login', f:() => isTrustedLink("https://bank.ru.evil.top/login") === false },
+    { n:'Атака: https://evil-bank.ru', f:() => isTrustedLink("https://evil-bank.ru") === false },
+    { n:'Атака: https://bank.ru@evil.top (настоящий домен evil.top)', f:() => isTrustedLink("https://bank.ru@evil.top/") === false },
+    { n:'Атака: https://evil.top/?go=bank.ru', f:() => isTrustedLink("https://evil.top/?go=bank.ru") === false },
+    { n:'Без шифрования http://bank.ru: не доверяем', f:() => isTrustedLink("http://bank.ru") === false },
+    { n:'Не ссылка → false без ошибки', f:() => isTrustedLink("просто текст") === false }
+  ],
+  solution:
+`function isTrustedLink(url) {
+  try {
+    const u = new URL(url);                       // разбираем ссылку
+    if (u.protocol !== "https:") return false;    // только шифрование
+    return u.hostname === "bank.ru" ||
+           u.hostname.endsWith(".bank.ru");       // точка важна!
+  } catch {
+    return false;                                 // это вообще не ссылка
+  }
+}`,
+  py:
+`from urllib.parse import urlparse
+def is_trusted_link(url):
+    u = urlparse(url)
+    host = u.hostname or ""
+    return u.scheme == "https" and (host == "bank.ru" or host.endswith(".bank.ru"))`,
+  why:'Проверка «содержит bank.ru» ломается на bank.ru.evil.top и evil.top/?go=bank.ru. Ссылку надо разобрать стандартным парсером и сравнивать именно домен. Точка в «.bank.ru» не даёт пройти домену evil-bank.ru.' }
+];
+
+const WORKER_SRC = `self.onmessage = function (e) {
+  var code = e.data.code, tests = e.data.tests, out = [];
+  try { new Function(code); } catch (err) { self.postMessage({ syntax: String(err.message || err) }); return; }
+  for (var k = 0; k < tests.length; k++) {
+    try {
+      var run = new Function(code + "\\n;return (" + tests[k] + ")();");
+      out.push({ ok: run() === true });
+    } catch (err) { out.push({ ok: false, err: String(err && err.message || err) }); }
+  }
+  self.postMessage({ results: out });
+};`;
+let workerUrl = null;
+function runTests(code, tests){
+  return new Promise(res => {
+    try {
+      if (!workerUrl) workerUrl = URL.createObjectURL(new Blob([WORKER_SRC], { type:'text/javascript' }));
+      const w = new Worker(workerUrl);
+      const to = setTimeout(() => { w.terminate(); res({ timeout:true }); }, 2000);
+      w.onmessage = e => { clearTimeout(to); w.terminate(); res(e.data); };
+      w.onerror = e => { clearTimeout(to); w.terminate(); res({ syntax: e.message || 'ошибка' }); e.preventDefault(); };
+      w.postMessage({ code, tests: tests.map(t => String(t.f)) });
+    } catch (err) { res({ syntax: String(err.message || err) }); }
+  });
+}
+
+const wsStore = {
+  get(k){ try { return localStorage.getItem('ksh-' + k); } catch(e) { return null; } },
+  set(k,v){ try { localStorage.setItem('ksh-' + k, v); } catch(e) {} }
+};
+
+function workshop(){
+  $('bar').hidden = true;
+  const doneCount = TASKS.filter(t => wsStore.get('done-' + t.id)).length;
+  app.innerHTML = `
+  <button class="back" id="home">← В меню</button>
+  <div class="card">
+    <span class="tag spot">Мастерская · JavaScript</span>
+    <h1>Пиши код защиты</h1>
+    <p class="muted">В каждом задании есть уязвимая функция. Перепиши её, нажми «Проверить», и игра запустит твой код и атакует его. Задание пройдено, когда все атаки отбиты.</p>
+    <p class="muted">Выполнено: <b style="color:var(--text)">${doneCount} из ${TASKS.length}</b></p>
+  </div>
+  <div class="tasks">${TASKS.map((t,k) => `
+    <button class="task ${wsStore.get('done-' + t.id) ? 'done' : ''}" data-k="${k}">
+      <span class="st">${wsStore.get('done-' + t.id) ? '✓' : k+1}</span>
+      <span><b>${esc(t.title)}</b><small>${esc(t.topic)}</small></span>
+    </button>`).join('')}</div>`;
+  window.scrollTo(0,0);
+  $('home').onclick = intro;
+  app.querySelectorAll('.task').forEach(b => b.onclick = () => openTask(+b.dataset.k));
+}
+
+function openTask(k){
+  const T = TASKS[k];
+  let fails = 0;
+  app.innerHTML = `
+  <button class="back" id="toList">← Все задания</button>
+  <div class="card">
+    <span class="tag spot">Задание ${k+1}/${TASKS.length} · ${esc(T.topic)}</span>
+    <h1>${esc(T.title)}</h1>
+    <p>${esc(T.task)}</p>
+    <div class="editor">
+      <div class="hd"><span>defense.js</span><span>JavaScript</span></div>
+      <textarea class="code" id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" aria-label="Редактор кода"></textarea>
+      <div class="keys" id="keys">${['{','}','(',')','[',']',';','"',"'",'=','<','>','/','\\','.','!','&&','||','return ','  '].map(s =>
+        `<button data-s="${esc(s)}">${s === '  ' ? '⇥' : esc(s.trim() || s)}</button>`).join('')}</div>
+    </div>
+    <div class="row2">
+      <button class="btn" id="check">▶ Проверить</button>
+      <button class="btn ghost" id="reset">Сбросить</button>
+    </div>
+    <button class="btn ghost" id="help">💡 Подсказка</button>
+    <div id="hintBox"></div>
+  </div>
+  <div id="res"></div>`;
+  window.scrollTo(0,0);
+  const ta = $('code');
+  ta.value = wsStore.get('code-' + T.id) || T.starter;
+  ta.addEventListener('input', () => wsStore.set('code-' + T.id, ta.value));
+  ta.addEventListener('keydown', e => { if (e.key === 'Tab'){ e.preventDefault(); insert('  '); } });
+  function insert(s){
+    ta.focus();
+    const a = ta.selectionStart, b = ta.selectionEnd;
+    ta.setRangeText(s, a, b, 'end');
+    wsStore.set('code-' + T.id, ta.value);
+  }
+  $('keys').querySelectorAll('button').forEach(b => {
+    b.addEventListener('pointerdown', e => e.preventDefault()); // не терять фокус и клавиатуру
+    b.onclick = () => insert(b.dataset.s);
+  });
+  $('toList').onclick = workshop;
+  $('reset').onclick = () => { ta.value = T.starter; wsStore.set('code-' + T.id, ta.value); $('res').innerHTML = ''; };
+  $('help').onclick = () => {
+    const showSol = fails >= 2;
+    $('hintBox').innerHTML = `<div class="term"><div class="hd">${showSol ? 'решение' : 'подсказка'}</div><pre>${esc(showSol ? T.solution : T.hint)}</pre></div>
+      ${showSol ? '' : '<p class="muted" style="font-size:13px;margin-top:6px">После двух неудачных проверок здесь можно будет открыть готовое решение.</p>'}`;
+  };
+  $('check').onclick = async () => {
+    $('check').disabled = true; $('check').textContent = 'Атакую…';
+    const r = await runTests(ta.value, T.tests);
+    $('check').disabled = false; $('check').textContent = '▶ Проверить';
+    let html;
+    if (r.timeout){
+      fails++;
+      html = `<div class="card"><div class="verdict bad"><div>Код завис<small>Проверка длилась больше 2 секунд. Похоже на бесконечный цикл.</small></div></div></div>`;
+    } else if (r.syntax){
+      fails++;
+      html = `<div class="card"><div class="verdict bad"><div>Ошибка в синтаксисе<small>Код не запустился. Проверь скобки и кавычки.</small></div></div><div class="errbox">${esc(r.syntax)}</div></div>`;
+    } else {
+      const passed = r.results.filter(x => x.ok).length, all = passed === T.tests.length;
+      if (!all) fails++;
+      if (all){ wsStore.set('done-' + T.id, '1'); beep(660,.12); setTimeout(()=>beep(990,.2),100); } else beep(160,.3,'sawtooth',.05);
+      html = `<div class="card">
+        <div class="verdict ${all ? 'ok' : 'bad'}"><div>${all ? 'Все атаки отбиты!' : `Отбито ${passed} из ${T.tests.length}`}
+          <small>${all ? 'Твой код защищает сервер.' : 'Исправь код: красные строки показывают, какие атаки прошли.'}</small></div></div>
+        <div class="tests">${T.tests.map((t,n) => { const x = r.results[n]; return `<div class="test ${x.ok ? 'ok' : 'bad'}"><b>${x.ok ? '✓' : '✗'}</b><span>${esc(t.n)}${x.err ? `<small>Ошибка: ${esc(x.err)}</small>` : ''}</span></div>`; }).join('')}</div>
+        ${all ? `<div class="deb">
+          <section><h3 class="h-def">Эталонное решение</h3><div class="term"><pre>${esc(T.solution)}</pre></div></section>
+          <section><h3 class="h-why">Почему это защищает</h3><p>${esc(T.why)}</p></section>
+          <section><h3 class="h-res">То же на Python</h3><div class="term"><pre>${esc(T.py)}</pre></div></section>
+        </div>
+        <button class="btn" id="nextTask">${k < TASKS.length - 1 ? 'Следующее задание →' : 'Ко всем заданиям'}</button>` : ''}
+      </div>`;
+    }
+    $('res').innerHTML = html;
+    $('res').scrollIntoView({ behavior:'smooth', block:'start' });
+    const nb = $('nextTask'); if (nb) nb.onclick = () => k < TASKS.length - 1 ? openTask(k+1) : workshop();
+  };
 }
 
 intro();
