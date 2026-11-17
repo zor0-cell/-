@@ -109,6 +109,47 @@ ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
 textarea.code{width:100%;min-height:260px;resize:vertical;border:0;outline:0;background:transparent;color:var(--text);font-family:var(--mono);font-size:16px;line-height:1.5;padding:12px;white-space:pre;overflow:auto;tab-size:2}
 .keys{display:flex;gap:6px;overflow-x:auto;padding:8px;border-top:1px solid var(--line);background:var(--panel-2)}
 .keys button{flex:none;min-width:38px;height:36px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-family:var(--mono);font-size:15px;cursor:pointer;padding:0 8px}
+.task{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+.tk{font-family:var(--mono);font-size:12px;font-weight:700;color:#9ab6ff}
+.tmid{min-width:0}
+.pill{font-family:var(--mono);font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.p-block{background:rgba(255,92,122,.2);color:var(--breach)}
+.p-crit{background:rgba(255,92,122,.12);color:#ff8fa3}
+.p-high{background:rgba(255,181,71,.14);color:var(--alert)}
+.p-done{background:rgba(79,209,197,.14);color:var(--shield)}
+.trow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+dl.meta{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:14px}
+dl.meta dt{color:var(--muted)} dl.meta dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.mono{font-family:var(--mono);font-size:13px}
+h3.sub{margin:0 0 4px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+ol.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+details summary{cursor:pointer;font-family:var(--mono);font-size:13px;color:var(--muted)}
+ul.accept{margin:8px 0 0;padding-left:20px;font-size:14px;display:flex;flex-direction:column;gap:4px}
+.ide{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#070c16;min-width:0}
+.tabs{display:flex;align-items:center;gap:10px;background:var(--panel);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12px;min-width:0}
+.tab{padding:8px 12px;border-right:1px solid var(--line);color:var(--text);background:#070c16;border-top:2px solid var(--shield)}
+.path{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ed{display:grid;grid-template-columns:auto 1fr;height:300px;min-width:0}
+.gut{font-family:var(--mono);font-size:16px;line-height:1.5;color:#3d4f6b;text-align:right;padding:12px 8px 12px 10px;border-right:1px solid var(--line);user-select:none;overflow:hidden;will-change:transform}
+.area{position:relative;overflow:hidden;min-width:0}
+.area pre.hl,.area textarea{margin:0;font-family:var(--mono);font-size:16px;line-height:1.5;padding:12px;white-space:pre;tab-size:2;letter-spacing:0}
+.area pre.hl{position:absolute;left:0;top:0;min-width:100%;pointer-events:none;color:var(--text)}
+.area textarea{position:absolute;inset:0;width:100%;height:100%;resize:none;border:0;outline:0;background:transparent;color:transparent;caret-color:#fff;overflow:auto}
+.area textarea::selection{background:rgba(130,170,255,.35);color:transparent}
+.t-kw{color:#c792ea}.t-str{color:#c3e88d}.t-com{color:#5c7092;font-style:italic}.t-num{color:#f78c6c}
+.sbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#0f2a3a;color:#9fc6d8;font-family:var(--mono);font-size:11px;padding:4px 10px}
+.sbar #dirty{color:var(--alert)}
+.chat{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.chat b{font-family:var(--mono);font-size:12px;color:var(--alert)}
+.console{background:#05080e;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.chead{display:flex;gap:6px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--muted)}
+.chead span:last-child{margin-left:8px}
+.dot{width:10px;height:10px;border-radius:50%}.dot.r{background:#ff5f57}.dot.y{background:#febc2e}.dot.g{background:#28c840}
+.cbody{font-family:var(--mono);font-size:12.5px;line-height:1.6;padding:10px 12px;max-height:420px;overflow:auto}
+.cl{white-space:pre-wrap;overflow-wrap:anywhere;min-height:1em}
+.cl.dim{color:var(--muted)}.cl.ok{color:var(--shield)}.cl.bad{color:var(--breach)}.cl.warn{color:var(--alert)}
+.pr{color:#82aaff}.pr.hk{color:var(--breach)}
+.val{color:#ffd580}
 .row2{display:grid;grid-template-columns:2fr 1fr;gap:8px}
 .tests{display:flex;flex-direction:column;gap:6px}
 .test{display:flex;gap:10px;align-items:flex-start;font-size:14px;padding:8px 10px;border-radius:8px;background:var(--panel-2)}
@@ -658,27 +699,120 @@ def is_trusted_link(url):
   why:'Проверка «содержит bank.ru» ломается на bank.ru.evil.top и evil.top/?go=bank.ru. Ссылку надо разобрать стандартным парсером и сравнивать именно домен. Точка в «.bank.ru» не даёт пройти домену evil-bank.ru.' }
 ];
 
+/* ---------- Тикеты: как задача приходит в настоящей команде ---------- */
+const TICKETS = {
+  xss:  { key:'SEC-142', prio:'Критический', file:'src/routes/comments.js', svc:'shop-web',
+          reporter:'Баг-баунти, исследователь white_hat',
+          steps:['Открыть любой товар','В поле комментария отправить <script>alert(1)<\/script>','Обновить страницу: скрипт выполняется у всех посетителей'],
+          impact:'Кража сессий покупателей, вход в чужие аккаунты.' },
+  pass: { key:'SEC-156', prio:'Высокий', file:'src/auth/password-policy.js', svc:'auth-service',
+          reporter:'Аудит безопасности',
+          steps:['Зарегистрироваться с паролем 123456','Регистрация проходит успешно'],
+          impact:'Аккаунты с паролями из словарей подбираются за секунды.' },
+  limit:{ key:'SEC-161', prio:'Критический', file:'src/auth/rate-limit.js', svc:'auth-service',
+          reporter:'SOC, мониторинг',
+          steps:['С одного IP отправлено 4 812 запросов POST /login за 60 секунд','Ни один запрос не заблокирован'],
+          impact:'Подбор пароля администратора идёт прямо сейчас.' },
+  sql:  { key:'SEC-170', prio:'Блокер', file:'src/auth/login-query.js', svc:'auth-service',
+          reporter:'Пентест, внешний подрядчик',
+          steps:["На странице входа ввести логин admin' --","Пароль оставить любым","Происходит вход под администратором"],
+          impact:'Полный доступ к админке и всей базе данных.' },
+  path: { key:'SEC-174', prio:'Критический', file:'src/routes/download.js', svc:'files-api',
+          reporter:'Баг-баунти, исследователь null_byte',
+          steps:['GET /download?file=../../etc/passwd','Сервер отдаёт системный файл'],
+          impact:'Чтение конфигов, паролей к базе и ключей сервера.' },
+  link: { key:'SEC-181', prio:'Высокий', file:'src/mail/link-scanner.js', svc:'mail-gateway',
+          reporter:'Служба поддержки: жалобы клиентов',
+          steps:['Клиентам приходят письма со ссылкой https://bank.ru.evil.top/login','Почтовый фильтр помечает ссылку как безопасную'],
+          impact:'Клиенты вводят пароли на фишинговом сайте.' }
+};
+
+/* ---------- Атаки: какой запрос шлёт хакер и что показать из ответа твоего кода ---------- */
+const ATTACKS = {
+  xss: [
+    { req:'POST /api/comments  text=<script>alert(1)<\/script>', o:() => escapeHtml("<script>alert(1)</" + "script>") },
+    { req:'POST /api/comments  text=" onmouseover="steal()', o:() => escapeHtml('" onmouseover="steal()') },
+    { req:"POST /api/comments  text=it's", o:() => escapeHtml("it's") },
+    { req:'POST /api/comments  text=a & b', o:() => escapeHtml("a & b") },
+    { req:'POST /api/comments  text=&lt;', o:() => escapeHtml("&lt;") },
+    { req:'POST /api/comments  text=Привет, мир! 2+2=4', o:() => escapeHtml("Привет, мир! 2+2=4") }
+  ],
+  pass: [
+    { req:'POST /api/register  password=123456', o:() => isStrongPassword("123456") },
+    { req:'POST /api/register  password=password', o:() => isStrongPassword("password") },
+    { req:'POST /api/register  password=Qw3rty!', o:() => isStrongPassword("Qw3rty!") },
+    { req:'POST /api/register  password=Kotik2010Kotik', o:() => isStrongPassword("Kotik2010Kotik") },
+    { req:'POST /api/register  password=ALLCAPS-12345678', o:() => isStrongPassword("ALLCAPS-12345678") },
+    { req:'POST /api/register  password=Moy-Ryzhiy-Kot!', o:() => isStrongPassword("Moy-Ryzhiy-Kot!") },
+    { req:'POST /api/register  password=Moy-Kot-Ryzhik-2024', o:() => isStrongPassword("Moy-Kot-Ryzhik-2024") },
+    { req:'POST /api/register  password=Zebra#Tea7Rocket', o:() => isStrongPassword("Zebra#Tea7Rocket") }
+  ],
+  limit: [
+    { req:'POST /login ×5  from 10.0.0.1', o:() => { const a = createLimiter(5); return [1,2,3,4,5].map(() => a("10.0.0.1")); } },
+    { req:'POST /login попытка №6  from 10.0.0.1', o:() => { const a = createLimiter(5); for (let k = 0; k < 5; k++) a("10.0.0.1"); return a("10.0.0.1"); } },
+    { req:'брутфорс: 1000 × POST /login  from 6.6.6.6', o:() => { const a = createLimiter(5); let n = 0; for (let k = 0; k < 1000; k++) if (a("6.6.6.6")) n++; return "пропущено " + n + " из 1000"; } },
+    { req:'POST /login  from 10.0.0.2 (обычный пользователь)', o:() => { const a = createLimiter(3); for (let k = 0; k < 10; k++) a("6.6.6.6"); return a("10.0.0.2"); } },
+    { req:'новый экземпляр лимитера, POST /login  from 1.1.1.1', o:() => { const a = createLimiter(1), b = createLimiter(1); a("1.1.1.1"); return b("1.1.1.1"); } }
+  ],
+  sql: [
+    { req:"POST /login  login=admin' --", o:() => buildLoginQuery("admin' --") },
+    { req:"GET /search?q=' OR '1'='1", o:() => buildLoginQuery("' OR '1'='1") },
+    { req:'POST /login  login=anna', o:() => buildLoginQuery("anna").sql },
+    { req:"POST /login  login=admin' --", o:() => buildLoginQuery("admin' --").params },
+    { req:'POST /login  login=anna', o:() => buildLoginQuery("anna").params }
+  ],
+  path: [
+    { req:'GET /download?file=../../etc/passwd', o:() => safeFileName("../../etc/passwd") },
+    { req:'GET /download?file=..\\..\\windows\\win.ini', o:() => safeFileName("..\\..\\windows\\win.ini") },
+    { req:'GET /download?file=/etc/passwd', o:() => safeFileName("/etc/passwd") },
+    { req:'GET /download?file=.env', o:() => safeFileName(".env") },
+    { req:'GET /download?file=report..pdf/../x', o:() => safeFileName("report..pdf/../x") },
+    { req:'GET /download?file=', o:() => safeFileName("") },
+    { req:'GET /download?file=report.pdf', o:() => safeFileName("report.pdf") },
+    { req:'GET /download?file=photo_2024-01.jpg', o:() => safeFileName("photo_2024-01.jpg") }
+  ],
+  link: [
+    { req:'scan https://bank.ru/login', o:() => isTrustedLink("https://bank.ru/login") },
+    { req:'scan https://online.bank.ru/pay', o:() => isTrustedLink("https://online.bank.ru/pay") },
+    { req:'scan https://bank.ru.evil.top/login', o:() => isTrustedLink("https://bank.ru.evil.top/login") },
+    { req:'scan https://evil-bank.ru', o:() => isTrustedLink("https://evil-bank.ru") },
+    { req:'scan https://bank.ru@evil.top/', o:() => isTrustedLink("https://bank.ru@evil.top/") },
+    { req:'scan https://evil.top/?go=bank.ru', o:() => isTrustedLink("https://evil.top/?go=bank.ru") },
+    { req:'scan http://bank.ru', o:() => isTrustedLink("http://bank.ru") },
+    { req:'scan "просто текст"', o:() => isTrustedLink("просто текст") }
+  ]
+};
+
+/* ---------- Песочница: код игрока выполняется в отдельном Web Worker ---------- */
 const WORKER_SRC = `self.onmessage = function (e) {
-  var code = e.data.code, tests = e.data.tests, out = [];
+  var code = e.data.code, tests = e.data.tests, outs = e.data.outs, res = [];
   try { new Function(code); } catch (err) { self.postMessage({ syntax: String(err.message || err) }); return; }
-  for (var k = 0; k < tests.length; k++) {
-    try {
-      var run = new Function(code + "\\n;return (" + tests[k] + ")();");
-      out.push({ ok: run() === true });
-    } catch (err) { out.push({ ok: false, err: String(err && err.message || err) }); }
+  function show(v) {
+    if (v === undefined) return "undefined";
+    if (typeof v === "string") return JSON.stringify(v);
+    try { return JSON.stringify(v); } catch (x) { return String(v); }
   }
-  self.postMessage({ results: out });
+  for (var k = 0; k < tests.length; k++) {
+    var r = { ok: false, out: "" };
+    try { r.ok = new Function(code + "\\n;return (" + tests[k] + ")();")() === true; }
+    catch (err) { r.err = String(err && err.message || err); }
+    try { r.out = show(new Function(code + "\\n;return (" + outs[k] + ")();")()); }
+    catch (err) { r.out = "Error: " + String(err && err.message || err); }
+    if (r.out.length > 140) r.out = r.out.slice(0, 140) + "…";
+    res.push(r);
+  }
+  self.postMessage({ results: res });
 };`;
 let workerUrl = null;
-function runTests(code, tests){
+function runTests(code, tests, attacks){
   return new Promise(res => {
     try {
       if (!workerUrl) workerUrl = URL.createObjectURL(new Blob([WORKER_SRC], { type:'text/javascript' }));
       const w = new Worker(workerUrl);
-      const to = setTimeout(() => { w.terminate(); res({ timeout:true }); }, 2000);
+      const to = setTimeout(() => { w.terminate(); res({ timeout:true }); }, 3000);
       w.onmessage = e => { clearTimeout(to); w.terminate(); res(e.data); };
       w.onerror = e => { clearTimeout(to); w.terminate(); res({ syntax: e.message || 'ошибка' }); e.preventDefault(); };
-      w.postMessage({ code, tests: tests.map(t => String(t.f)) });
+      w.postMessage({ code, tests: tests.map(t => String(t.f)), outs: attacks.map(a => String(a.o)) });
     } catch (err) { res({ syntax: String(err.message || err) }); }
   });
 }
@@ -688,105 +822,211 @@ const wsStore = {
   set(k,v){ try { localStorage.setItem('ksh-' + k, v); } catch(e) {} }
 };
 
+/* ---------- Подсветка синтаксиса JavaScript ---------- */
+const KW = /^(function|return|const|let|var|if|else|for|while|try|catch|new|throw|of|in|typeof)$/;
+function highlight(src){
+  const re = /(\/\/[^\n]*)|("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`)|\b([A-Za-z_$][\w$]*)\b|\b(\d+)\b/g;
+  let out = '', last = 0, m;
+  while ((m = re.exec(src))){
+    out += esc(src.slice(last, m.index));
+    if (m[1]) out += `<span class="t-com">${esc(m[1])}</span>`;
+    else if (m[2]) out += `<span class="t-str">${esc(m[2])}</span>`;
+    else if (m[3]) out += KW.test(m[3]) ? `<span class="t-kw">${m[3]}</span>` : /^(true|false|null|undefined)$/.test(m[3]) ? `<span class="t-num">${m[3]}</span>` : m[3];
+    else out += `<span class="t-num">${m[4]}</span>`;
+    last = re.lastIndex;
+  }
+  return out + esc(src.slice(last)) + '\n';
+}
+
+const PRIO_CLS = { 'Блокер':'p-block', 'Критический':'p-crit', 'Высокий':'p-high' };
+
 function workshop(){
   $('bar').hidden = true;
   const doneCount = TASKS.filter(t => wsStore.get('done-' + t.id)).length;
   app.innerHTML = `
   <button class="back" id="home">← В меню</button>
   <div class="card">
-    <span class="tag spot">Мастерская · JavaScript</span>
-    <h1>Пиши код защиты</h1>
-    <p class="muted">В каждом задании есть уязвимая функция. Перепиши её, нажми «Проверить», и игра запустит твой код и атакует его. Задание пройдено, когда все атаки отбиты.</p>
-    <p class="muted">Выполнено: <b style="color:var(--text)">${doneCount} из ${TASKS.length}</b></p>
+    <span class="tag spot">Мастерская · смена в отделе безопасности</span>
+    <h1>Очередь задач</h1>
+    <p class="muted">Ты разработчик в команде безопасности. Каждая задача пришла из баг-трекера: исследователи и мониторинг нашли уязвимость. Открой тикет, исправь код в редакторе и задеплой. После деплоя хакер атакует сервер, и ты увидишь, что на самом деле вернул твой код.</p>
+    <p class="muted">Закрыто: <b style="color:var(--text)">${doneCount} из ${TASKS.length}</b></p>
   </div>
-  <div class="tasks">${TASKS.map((t,k) => `
-    <button class="task ${wsStore.get('done-' + t.id) ? 'done' : ''}" data-k="${k}">
-      <span class="st">${wsStore.get('done-' + t.id) ? '✓' : k+1}</span>
-      <span><b>${esc(t.title)}</b><small>${esc(t.topic)}</small></span>
-    </button>`).join('')}</div>`;
+  <div class="tasks">${TASKS.map((t,k) => { const tk = TICKETS[t.id], d = wsStore.get('done-' + t.id); return `
+    <button class="task ${d ? 'done' : ''}" data-k="${k}">
+      <span class="tk">${tk.key}</span>
+      <span class="tmid"><b>${esc(t.title)}</b><small>${esc(tk.svc)} · ${esc(t.topic)}</small></span>
+      <span class="pill ${d ? 'p-done' : PRIO_CLS[tk.prio]}">${d ? 'Закрыт' : esc(tk.prio)}</span>
+    </button>`; }).join('')}</div>`;
   window.scrollTo(0,0);
   $('home').onclick = intro;
   app.querySelectorAll('.task').forEach(b => b.onclick = () => openTask(+b.dataset.k));
 }
 
+const sleep = ms => new Promise(r => setTimeout(r, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : ms));
+
 function openTask(k){
-  const T = TASKS[k];
-  let fails = 0;
+  const T = TASKS[k], TK = TICKETS[T.id], AT = ATTACKS[T.id];
+  let fails = 0, busy = false;
   app.innerHTML = `
-  <button class="back" id="toList">← Все задания</button>
-  <div class="card">
-    <span class="tag spot">Задание ${k+1}/${TASKS.length} · ${esc(T.topic)}</span>
+  <button class="back" id="toList">← Очередь задач</button>
+  <div class="card ticket">
+    <div class="trow"><span class="tk">${TK.key}</span><span class="pill ${PRIO_CLS[TK.prio]}">${esc(TK.prio)}</span><span class="muted" style="font-size:12px">${esc(TK.svc)}</span></div>
     <h1>${esc(T.title)}</h1>
-    <p>${esc(T.task)}</p>
-    <div class="editor">
-      <div class="hd"><span>defense.js</span><span>JavaScript</span></div>
-      <textarea class="code" id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" aria-label="Редактор кода"></textarea>
-      <div class="keys" id="keys">${['{','}','(',')','[',']',';','"',"'",'=','<','>','/','\\','.','!','&&','||','return ','  '].map(s =>
-        `<button data-s="${esc(s)}">${s === '  ' ? '⇥' : esc(s.trim() || s)}</button>`).join('')}</div>
-    </div>
-    <div class="row2">
-      <button class="btn" id="check">▶ Проверить</button>
-      <button class="btn ghost" id="reset">Сбросить</button>
-    </div>
-    <button class="btn ghost" id="help">💡 Подсказка</button>
-    <div id="hintBox"></div>
+    <dl class="meta">
+      <dt>Источник</dt><dd>${esc(TK.reporter)}</dd>
+      <dt>Файл</dt><dd class="mono">${esc(TK.file)}</dd>
+      <dt>Ущерб</dt><dd>${esc(TK.impact)}</dd>
+    </dl>
+    <div><h3 class="sub">Шаги воспроизведения</h3><ol class="steps">${TK.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
+    <div><h3 class="sub">Что сделать</h3><p>${esc(T.task)}</p></div>
+    <details><summary>Критерии приёмки (${T.tests.length})</summary><ul class="accept">${T.tests.map(t => `<li>${esc(t.n)}</li>`).join('')}</ul></details>
   </div>
+
+  <div class="ide">
+    <div class="tabs"><span class="tab on">${esc(TK.file.split('/').pop())}</span><span class="path">${esc(TK.file)}</span></div>
+    <div class="ed">
+      <div class="gut" id="gut" aria-hidden="true"></div>
+      <div class="area">
+        <pre class="hl" id="hl" aria-hidden="true"></pre>
+        <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" aria-label="Редактор кода"></textarea>
+      </div>
+    </div>
+    <div class="keys" id="keys">${['{','}','(',')','[',']',';','"',"'",'=','<','>','/','\\','.','!','&&','||','return ','  '].map(s =>
+      `<button data-s="${esc(s)}">${s === '  ' ? '⇥' : esc(s.trim() || s)}</button>`).join('')}</div>
+    <div class="sbar"><span id="pos">Ln 1, Col 1</span><span>JavaScript · UTF-8</span><span id="dirty">● не сохранено в git</span></div>
+  </div>
+
+  <div class="row2">
+    <button class="btn" id="check">⇪ Commit &amp; Deploy</button>
+    <button class="btn ghost" id="reset">git checkout</button>
+  </div>
+  <button class="btn ghost" id="help">💡 Спросить у тимлида</button>
+  <div id="hintBox"></div>
   <div id="res"></div>`;
   window.scrollTo(0,0);
-  const ta = $('code');
+
+  const ta = $('code'), hl = $('hl'), gut = $('gut');
   ta.value = wsStore.get('code-' + T.id) || T.starter;
-  ta.addEventListener('input', () => wsStore.set('code-' + T.id, ta.value));
+  function paint(){
+    hl.innerHTML = highlight(ta.value);
+    const n = ta.value.split('\n').length;
+    gut.innerHTML = Array.from({ length:n }, (_, i) => i + 1).join('<br>');
+    sync();
+  }
+  function sync(){
+    hl.style.transform = `translate(${-ta.scrollLeft}px, ${-ta.scrollTop}px)`;
+    gut.style.transform = `translateY(${-ta.scrollTop}px)`;
+  }
+  function pos(){
+    const before = ta.value.slice(0, ta.selectionStart).split('\n');
+    $('pos').textContent = `Ln ${before.length}, Col ${before[before.length-1].length + 1}`;
+  }
+  ta.addEventListener('input', () => { wsStore.set('code-' + T.id, ta.value); $('dirty').hidden = false; paint(); pos(); });
+  ta.addEventListener('scroll', sync);
+  ['keyup','click','select'].forEach(ev => ta.addEventListener(ev, pos));
   ta.addEventListener('keydown', e => { if (e.key === 'Tab'){ e.preventDefault(); insert('  '); } });
   function insert(s){
     ta.focus();
-    const a = ta.selectionStart, b = ta.selectionEnd;
-    ta.setRangeText(s, a, b, 'end');
-    wsStore.set('code-' + T.id, ta.value);
+    ta.setRangeText(s, ta.selectionStart, ta.selectionEnd, 'end');
+    ta.dispatchEvent(new Event('input'));
   }
   $('keys').querySelectorAll('button').forEach(b => {
-    b.addEventListener('pointerdown', e => e.preventDefault()); // не терять фокус и клавиатуру
+    b.addEventListener('pointerdown', e => e.preventDefault());
     b.onclick = () => insert(b.dataset.s);
   });
+  paint();
+  $('dirty').hidden = !wsStore.get('code-' + T.id);
+
   $('toList').onclick = workshop;
-  $('reset').onclick = () => { ta.value = T.starter; wsStore.set('code-' + T.id, ta.value); $('res').innerHTML = ''; };
+  $('reset').onclick = () => { ta.value = T.starter; wsStore.set('code-' + T.id, ta.value); paint(); $('res').innerHTML = ''; };
   $('help').onclick = () => {
     const showSol = fails >= 2;
-    $('hintBox').innerHTML = `<div class="term"><div class="hd">${showSol ? 'решение' : 'подсказка'}</div><pre>${esc(showSol ? T.solution : T.hint)}</pre></div>
-      ${showSol ? '' : '<p class="muted" style="font-size:13px;margin-top:6px">После двух неудачных проверок здесь можно будет открыть готовое решение.</p>'}`;
+    $('hintBox').innerHTML = `<div class="chat"><b>Тимлид</b><p>${showSol ? 'Давай разберём вместе. Вот как бы я написал:' : esc(T.hint)}</p>
+      ${showSol ? `<div class="term"><pre>${esc(T.solution)}</pre></div>` : '<p class="muted" style="font-size:13px">После двух неудачных деплоев тимлид покажет готовое решение.</p>'}</div>`;
   };
+
   $('check').onclick = async () => {
-    $('check').disabled = true; $('check').textContent = 'Атакую…';
-    const r = await runTests(ta.value, T.tests);
-    $('check').disabled = false; $('check').textContent = '▶ Проверить';
-    let html;
-    if (r.timeout){
+    if (busy) return; busy = true;
+    $('check').disabled = true;
+    const res = $('res');
+    const short = Math.random().toString(16).slice(2, 9);
+    res.innerHTML = `<div class="console"><div class="chead"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span>CI / CD · ${esc(TK.svc)}</span></div><div class="cbody" id="cb"></div></div>`;
+    res.scrollIntoView({ behavior:'smooth', block:'start' });
+    const cb = $('cb');
+    const line = (html, cls='') => { const d = document.createElement('div'); d.className = 'cl ' + cls; d.innerHTML = html; cb.appendChild(d); cb.scrollTop = cb.scrollHeight; return d; };
+
+    line(`<span class="pr">dev@laptop:~/${esc(TK.svc)}$</span> git commit -am "fix(security): ${TK.key} ${esc(T.title.toLowerCase())}"`);
+    await sleep(350);
+    line(`[fix/${TK.key.toLowerCase()} ${short}] 1 file changed`, 'dim');
+    await sleep(300);
+    line(`<span class="pr">dev@laptop:~/${esc(TK.svc)}$</span> git push && ci run`);
+    await sleep(400);
+    const lint = line('▸ lint: проверка синтаксиса…', 'dim');
+    const r = await runTests(ta.value, T.tests, AT);
+    await sleep(350);
+
+    if (r.syntax || r.timeout){
       fails++;
-      html = `<div class="card"><div class="verdict bad"><div>Код завис<small>Проверка длилась больше 2 секунд. Похоже на бесконечный цикл.</small></div></div></div>`;
-    } else if (r.syntax){
-      fails++;
-      html = `<div class="card"><div class="verdict bad"><div>Ошибка в синтаксисе<small>Код не запустился. Проверь скобки и кавычки.</small></div></div><div class="errbox">${esc(r.syntax)}</div></div>`;
-    } else {
-      const passed = r.results.filter(x => x.ok).length, all = passed === T.tests.length;
-      if (!all) fails++;
-      if (all){ wsStore.set('done-' + T.id, '1'); beep(660,.12); setTimeout(()=>beep(990,.2),100); } else beep(160,.3,'sawtooth',.05);
-      html = `<div class="card">
-        <div class="verdict ${all ? 'ok' : 'bad'}"><div>${all ? 'Все атаки отбиты!' : `Отбито ${passed} из ${T.tests.length}`}
-          <small>${all ? 'Твой код защищает сервер.' : 'Исправь код: красные строки показывают, какие атаки прошли.'}</small></div></div>
-        <div class="tests">${T.tests.map((t,n) => { const x = r.results[n]; return `<div class="test ${x.ok ? 'ok' : 'bad'}"><b>${x.ok ? '✓' : '✗'}</b><span>${esc(t.n)}${x.err ? `<small>Ошибка: ${esc(x.err)}</small>` : ''}</span></div>`; }).join('')}</div>
-        ${all ? `<div class="deb">
-          <section><h3 class="h-def">Эталонное решение</h3><div class="term"><pre>${esc(T.solution)}</pre></div></section>
+      lint.innerHTML = `✗ ${r.timeout ? 'тесты зависли (таймаут 3 с): похоже на бесконечный цикл' : 'lint: SyntaxError'}`;
+      lint.className = 'cl bad';
+      if (r.syntax) line(esc(r.syntax), 'bad');
+      line('Пайплайн остановлен. Деплой отменён: сломанный код не попадёт на сервер.', 'dim');
+      beep(160,.3,'sawtooth',.05);
+      finishRun(false, 0, r);
+      return;
+    }
+    lint.innerHTML = '✓ lint: ок'; lint.className = 'cl ok';
+    await sleep(250);
+    line(`✓ build: ${esc(TK.svc)}:${short}`, 'ok');
+    await sleep(300);
+    line(`✓ deploy → staging.${esc(TK.svc)}.local`, 'ok');
+    await sleep(400);
+    line('', '');
+    line('━━━ ПЕНТЕСТ: хакер начинает атаку ━━━', 'warn');
+    await sleep(350);
+
+    let passed = 0;
+    for (let n = 0; n < T.tests.length; n++){
+      const x = r.results[n], a = AT[n];
+      line(`<span class="pr hk">attacker@evil:~$</span> ${esc(a.req)}`);
+      await sleep(260);
+      line(`  ← твой код вернул: <span class="val">${esc(x.out)}</span>`, 'dim');
+      await sleep(180);
+      line(`  ${x.ok ? '✓' : '✗'} ${esc(T.tests[n].n)}${x.err ? ` (ошибка: ${esc(x.err)})` : ''}`, x.ok ? 'ok' : 'bad');
+      if (x.ok){ passed++; beep(520 + n*40,.05,'square',.02); } else beep(150,.12,'sawtooth',.04);
+      await sleep(220);
+    }
+    const all = passed === T.tests.length;
+    line('', '');
+    line(all ? `━━━ Все ${passed} атак отражены. Можно в прод. ━━━` : `━━━ Пройдено ${passed} из ${T.tests.length}. Уязвимость осталась, откат деплоя. ━━━`, all ? 'ok' : 'bad');
+    if (!all) fails++;
+    finishRun(all, passed, r);
+  };
+
+  function finishRun(all, passed){
+    busy = false;
+    $('check').disabled = false;
+    const box = document.createElement('div');
+    if (all){
+      wsStore.set('done-' + T.id, '1');
+      $('dirty').hidden = true;
+      beep(660,.12); setTimeout(() => beep(990,.2), 100);
+      box.innerHTML = `<div class="card">
+        <div class="verdict ok"><div>${TK.key} закрыт<small>Исправление выкачено в прод. Код-ревью пройдено.</small></div></div>
+        <div class="deb">
+          <section><h3 class="h-def">Решение тимлида для сравнения</h3><div class="term"><pre>${esc(T.solution)}</pre></div></section>
           <section><h3 class="h-why">Почему это защищает</h3><p>${esc(T.why)}</p></section>
           <section><h3 class="h-res">То же на Python</h3><div class="term"><pre>${esc(T.py)}</pre></div></section>
         </div>
-        <button class="btn" id="nextTask">${k < TASKS.length - 1 ? 'Следующее задание →' : 'Ко всем заданиям'}</button>` : ''}
+        <button class="btn" id="nextTask">${k < TASKS.length - 1 ? 'Следующий тикет →' : 'К очереди задач'}</button>
       </div>`;
+    } else {
+      box.innerHTML = `<div class="card"><div class="verdict bad"><div>Тикет остаётся открытым<small>Посмотри в логе, какие атаки прошли и что вернул твой код, исправь и задеплой снова.</small></div></div></div>`;
     }
-    $('res').innerHTML = html;
-    $('res').scrollIntoView({ behavior:'smooth', block:'start' });
+    $('res').appendChild(box);
     const nb = $('nextTask'); if (nb) nb.onclick = () => k < TASKS.length - 1 ? openTask(k+1) : workshop();
-  };
+  }
 }
-
 intro();
 })();
 </script>
