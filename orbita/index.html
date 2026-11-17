@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#06071a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Орбита</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;800&family=Manrope:wght@500;700&display=swap">
+<style>
+/* Layout: full-bleed canvas of deep space; HUD pinned top, overlays centered over the play field */
+:root{
+  --void:#06071a;
+  --nebula:#15103a;
+  --ink:#eef0ff;
+  --dim:#9aa0d0;
+  --probe:#7df9ff;
+  --gold:#ffd166;
+  --danger:#ff5d73;
+  --display:"Unbounded", "Arial Black", system-ui, sans-serif;
+  --body:"Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none}
+body{background:var(--void);color:var(--ink);font-family:var(--body);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:fixed;inset:0 0 auto;display:flex;justify-content:space-between;align-items:flex-start;
+  padding-top:calc(env(safe-area-inset-top,0px) + 14px);
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));pointer-events:none}
+.score{font-family:var(--display);font-weight:800;font-size:44px;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;text-shadow:0 0 24px rgba(125,249,255,.35)}
+.best{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-top:6px}
+.mute{pointer-events:auto;background:none;border:1px solid rgba(154,160,208,.35);color:var(--ink);border-radius:999px;width:42px;height:42px;font-size:18px;cursor:pointer}
+.mute:focus-visible,.btn:focus-visible{outline:2px solid var(--probe);outline-offset:3px}
+.overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;
+  padding-block:24px;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));
+  background:radial-gradient(ellipse at 50% 45%, rgba(6,7,26,.25), rgba(6,7,26,.82) 70%)}
+.title{font-family:var(--display);font-weight:800;font-size:clamp(44px,14vw,84px);letter-spacing:-.03em;line-height:.95;text-wrap:balance}
+.title span{color:var(--probe)}
+.lead{max-width:30ch;font-size:16px;line-height:1.5;color:var(--dim)}
+.lead b{color:var(--ink)}
+.rules{display:grid;gap:10px;font-size:14px;color:var(--dim);text-align:left;max-width:300px}
+.rules div{display:flex;gap:12px;align-items:center}
+.dot{width:14px;height:14px;border-radius:50%;flex:none}
+.btn{font-family:var(--display);font-weight:500;font-size:17px;letter-spacing:.04em;color:var(--void);background:var(--probe);border:0;border-radius:999px;padding:16px 36px;cursor:pointer;box-shadow:0 0 30px rgba(125,249,255,.35)}
+.big{font-family:var(--display);font-weight:800;font-size:96px;line-height:1;font-variant-numeric:tabular-nums}
+.label{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.record{color:var(--gold);font-weight:700}
+.hint{font-size:13px;color:var(--dim);opacity:.8}
+@media (prefers-reduced-motion: reduce){.btn{box-shadow:none}}
+</style>
+</head>
+<body>
+
+<canvas id="c" aria-label="Игровое поле"></canvas>
+
+<div class="hud">
+  <div>
+    <div class="score" id="score">0</div>
+    <div class="best" id="bestHud">Рекорд 0</div>
+  </div>
+  <button class="mute" id="mute" aria-label="Звук">♪</button>
+</div>
+
+<div class="overlay" id="menu">
+  <div class="title">ОРБИ<span>ТА</span></div>
+  <p class="lead">Зонд кружит вокруг планеты. <b>Тапни</b>, чтобы сорваться с орбиты и долететь до следующей.</p>
+  <div class="rules">
+    <div><span class="dot" style="background:var(--probe);box-shadow:0 0 10px var(--probe)"></span>Попади в пунктирное кольцо планеты</div>
+    <div><span class="dot" style="background:var(--gold)"></span>Собирай звёзды по пути: +2 очка</div>
+    <div><span class="dot" style="background:var(--danger)"></span>Не врезайся в луны</div>
+  </div>
+  <button class="btn" id="startBtn">Старт</button>
+  <div class="hint" id="menuBest"></div>
+</div>
+
+<div class="overlay" id="over" hidden>
+  <div class="label">Зонд потерян</div>
+  <div class="big" id="finalScore">0</div>
+  <div class="label" id="finalBest">Рекорд 0</div>
+  <button class="btn" id="againBtn">Ещё раз</button>
+</div>
+
+<script>
+(() => {
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+const scoreEl = $('score'), bestHud = $('bestHud'), menu = $('menu'), over = $('over');
+let W = 0, H = 0, DPR = 1;
+function resize(){
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', resize); resize();
+
+const rand = (a,b) => a + Math.random()*(b-a);
+const TAU = Math.PI*2;
+let best = 0;
+try { best = +localStorage.getItem('orbita-best') || 0; } catch(e) {}
+let muted = false;
+try { muted = localStorage.getItem('orbita-mute') === '1'; } catch(e) {}
+
+/* ---------- sound ---------- */
+let ac = null;
+function initAudio(){ if (ac) return; try { ac = new (window.AudioContext||window.webkitAudioContext)(); } catch(e) {} }
+function tone(f, d, type='sine', vol=.07, f2){
+  if (!ac || muted) return;
+  const t0 = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t0);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0+d);
+  g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(.0001, t0+d);
+  o.connect(g).connect(ac.destination); o.start(t0); o.stop(t0+d+.02);
+}
+const sfx = {
+  jump(){ tone(300,.18,'triangle',.06,620); },
+  catch(n){ const b = 440*Math.pow(2,(n%8)/12); tone(b,.22,'sine',.08); setTimeout(()=>tone(b*1.5,.25,'sine',.05),60); },
+  star(){ tone(990,.12,'square',.03,1480); setTimeout(()=>tone(1480,.18,'square',.025),70); },
+  die(){ tone(220,.6,'sawtooth',.07,40); }
+};
+$('mute').textContent = muted ? '×' : '♪';
+$('mute').addEventListener('pointerdown', e => e.stopPropagation());
+$('mute').addEventListener('click', e => {
+  e.stopPropagation(); muted = !muted; $('mute').textContent = muted ? '×' : '♪';
+  try { localStorage.setItem('orbita-mute', muted?'1':'0'); } catch(err) {}
+});
+
+/* ---------- background stars ---------- */
+const sky = [];
+for (let i=0;i<160;i++) sky.push({x:Math.random(), y:Math.random(), s:rand(.4,1.8), k:[.05,.15,.3][i%3], tw:rand(0,TAU)});
+
+/* ---------- world ---------- */
+const HUES = [[200,80],[330,70],[30,85],[160,60],[265,70],[10,75],[50,80],[185,65]];
+let planets, cur, player, camY, score, maxIdx, t, particles, popups, stars, shake, state, deadT, nextIdx;
+
+function makePlanet(prev){
+  const idx = nextIdx++;
+  const r = rand(14, 26), R = r + rand(30, 42);
+  const margin = R + 12;
+  let x, y, tries = 0;
+  do {
+    y = prev.by - rand(170, 240);
+    x = rand(margin, Math.max(margin, W - margin));
+    tries++;
+  } while (Math.hypot(x-prev.bx, y-prev.by) < prev.R + R + 55 && tries < 40);
+  const [h, s] = HUES[Math.floor(Math.random()*HUES.length)];
+  const p = { idx, bx:x, by:y, x, y, r, R, h, s,
+    w: (2.3 + Math.min(1.7, idx*0.045)) * rand(.9,1.1),
+    ringed: Math.random() < .3, tilt: rand(-.5,.5),
+    moon:null, move:null };
+  if (idx >= 5 && Math.random() < Math.min(.65, .25 + idx*.015))
+    p.moon = { a: rand(0,TAU), w: rand(1.1,1.7) * (Math.random()<.5?-1:1) };
+  if (idx >= 9 && Math.random() < Math.min(.55, .2 + idx*.012)){
+    const room = (W - 2*margin)/2;
+    if (room > 25){
+      const amp = Math.min(rand(30, 90), room);
+      p.bx = rand(margin+amp, W-margin-amp);
+      p.move = { amp, sp: rand(.7, 1.4), ph: rand(0,TAU) };
+    }
+  }
+  // collectible star in the gap between planets
+  if (idx > 1 && Math.random() < .45){
+    stars.push({ x: (prev.bx + p.bx)/2 + rand(-60,60), y: (prev.by + p.by)/2 + rand(-25,25), taken:false, rot:rand(0,TAU) });
+    const st = stars[stars.length-1]; st.x = Math.max(24, Math.min(W-24, st.x));
+  }
+  return p;
+}
+
+function planetPos(p){
+  if (p.move) p.x = p.bx + p.move.amp*Math.sin(t*p.move.sp + p.move.ph);
+}
+
+function reset(){
+  t = 0; score = 0; maxIdx = 0; nextIdx = 0; shake = 0; deadT = 0;
+  particles = []; popups = []; stars = [];
+  const first = { idx: nextIdx++, bx: W/2, by: H*.68, x: W/2, y: H*.68, r: 26, R: 64, h: 200, s: 80, w: 2.3, ringed:true, tilt:-.3, moon:null, move:null };
+  planets = [first];
+  while (planets[planets.length-1].by > -H*1.2) planets.push(makePlanet(planets[planets.length-1]));
+  cur = first;
+  player = { mode:'orbit', a: Math.PI*.75, dir:1, x:0, y:0, vx:0, vy:0, ft:0, trail:[], from:null };
+  camY = cur.y - H*.68;
+  updateHud();
+}
+
+function updateHud(){
+  scoreEl.textContent = score;
+  bestHud.textContent = 'Рекорд ' + best;
+}
+
+function burst(x, y, color, n, sp){
+  for (let i=0;i<n;i++){
+    const a = rand(0,TAU), v = rand(sp*.3, sp);
+    particles.push({ x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, life:rand(.4,.9), max:.9, c:color, s:rand(1.5,3.5) });
+  }
+}
+
+function jump(){
+  if (state !== 'play' || player.mode !== 'orbit') return;
+  const speed = 430 + Math.min(230, score*5);
+  player.mode = 'fly'; player.ft = 0; player.from = cur;
+  player.vx = player.dir * -Math.sin(player.a) * speed;
+  player.vy = player.dir *  Math.cos(player.a) * speed;
+  burst(player.x, player.y, '125,249,255', 10, 120);
+  sfx.jump();
+}
+
+function capture(p){
+  const rx = player.x - p.x, ry = player.y - p.y;
+  player.mode = 'orbit';
+  player.a = Math.atan2(ry, rx);
+  player.dir = (rx*player.vy - ry*player.vx) > 0 ? 1 : -1;
+  cur = p;
+  if (p.moon){
+    let d = Math.abs(((p.moon.a - player.a) % TAU + TAU) % TAU);
+    d = Math.min(d, TAU - d);
+    if (d < 1.0) p.moon.a += Math.PI;
+  }
+  if (p.idx > maxIdx){
+    const gain = p.idx - maxIdx;
+    score += gain; maxIdx = p.idx;
+    popups.push({ x:player.x, y:player.y-16, txt: gain>1 ? '+'+gain+' прыжок через!' : '+1', life:1, c:'238,240,255' });
+    sfx.catch(score);
+  } else sfx.catch(0);
+  burst(player.x, player.y, `${hsl(p.h,p.s,70,true)}`, 16, 160);
+  updateHud();
+}
+
+function hsl(h,s,l,raw){ // returns "r,g,b" when raw
+  s/=100; l/=100;
+  const k = n => (n + h/30) % 12, a = s*Math.min(l,1-l);
+  const f = n => l - a*Math.max(-1, Math.min(k(n)-3, 9-k(n), 1));
+  const rgb = [f(0),f(8),f(4)].map(v=>Math.round(v*255));
+  return raw ? rgb.join(',') : `rgb(${rgb})`;
+}
+
+function die(){
+  if (state !== 'play') return;
+  state = 'dying'; deadT = 0; shake = 14;
+  burst(player.x, player.y, '255,93,115', 40, 260);
+  burst(player.x, player.y, '125,249,255', 20, 180);
+  sfx.die();
+  try { navigator.vibrate && navigator.vibrate(120); } catch(e) {}
+  if (score > best){ best = score; try { localStorage.setItem('orbita-best', best); } catch(e) {} }
+}
+
+function showOver(){
+  state = 'dead';
+  $('finalScore').textContent = score;
+  $('finalBest').innerHTML = score >= best && score > 0 ? '<span class="record">Новый рекорд!</span>' : 'Рекорд ' + best;
+  over.hidden = false;
+  updateHud();
+}
+
+function start(){
+  initAudio(); if (ac && ac.state === 'suspended') ac.resume();
+  menu.hidden = true; over.hidden = true;
+  if (state === 'dead' || state === 'dying') reset();
+  state = 'play';
+}
+
+/* ---------- update ---------- */
+function step(dt){
+  t += dt;
+  for (const p of planets){ planetPos(p); if (p.moon) p.moon.a += p.moon.w*dt; }
+
+  if (state === 'play' || state === 'menu'){
+    if (player.mode === 'orbit'){
+      player.a += player.dir * cur.w * dt;
+      player.x = cur.x + Math.cos(player.a)*cur.R;
+      player.y = cur.y + Math.sin(player.a)*cur.R;
+    } else {
+      const sub = 3;
+      for (let i=0;i<sub && player.mode==='fly' && state==='play';i++){
+        player.x += player.vx*dt/sub; player.y += player.vy*dt/sub;
+        for (const p of planets){
+          if (p === player.from) continue;
+          if (Math.hypot(player.x-p.x, player.y-p.y) < p.R){ capture(p); break; }
+        }
+        checkMoons();
+      }
+      player.ft += dt;
+      const sy = player.y - camY;
+      if (player.mode === 'fly' && (player.x < -30 || player.x > W+30 || sy > H+30 || sy < -80 || player.ft > 2.4)) die();
+    }
+    if (state === 'play'){
+      if (player.mode === 'orbit') checkMoons();
+      for (const s of stars){
+        if (!s.taken && Math.hypot(player.x-s.x, player.y-s.y) < 20){
+          s.taken = true; score += 2; updateHud(); sfx.star();
+          popups.push({ x:s.x, y:s.y-14, txt:'+2', life:1, c:'255,209,102' });
+          burst(s.x, s.y, '255,209,102', 14, 140);
+        }
+      }
+    }
+    // trail
+    player.trail.push({x:player.x, y:player.y});
+    if (player.trail.length > 22) player.trail.shift();
+  }
+
+  if (state === 'dying'){ deadT += dt; if (deadT > .8) showOver(); }
+
+  // camera
+  const target = cur.y - H*.68;
+  camY += (target - camY) * Math.min(1, dt*3.2);
+
+  // world upkeep
+  while (planets[planets.length-1].by > camY - H*.9) planets.push(makePlanet(planets[planets.length-1]));
+  planets = planets.filter(p => p === cur || p.y < camY + H + 160);
+  stars = stars.filter(s => s.y < camY + H + 80);
+
+  for (const q of particles){ q.x += q.vx*dt; q.y += q.vy*dt; q.vx *= .97; q.vy *= .97; q.life -= dt; }
+  particles = particles.filter(q => q.life > 0);
+  for (const q of popups){ q.y -= 30*dt; q.life -= dt*.9; }
+  popups = popups.filter(q => q.life > 0);
+  shake *= Math.pow(.02, dt);
+}
+
+function checkMoons(){
+  for (const p of planets){
+    if (!p.moon) continue;
+    const mx = p.x + Math.cos(p.moon.a)*p.R, my = p.y + Math.sin(p.moon.a)*p.R;
+    if (Math.hypot(player.x-mx, player.y-my) < 13){ die(); return; }
+  }
+}
+
+/* ---------- render ---------- */
+function draw(){
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#06071a'); g.addColorStop(1,'#15103a');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+  for (const s of sky){
+    const y = (((s.y*H - camY*s.k) % H) + H) % H;
+    const a = .35 + .35*Math.sin(t*1.5 + s.tw);
+    ctx.fillStyle = `rgba(238,240,255,${a})`;
+    ctx.fillRect(s.x*W, y, s.s, s.s);
+  }
+
+  ctx.save();
+  const sx = shake ? rand(-shake,shake) : 0, sy = shake ? rand(-shake,shake) : 0;
+  ctx.translate(sx, -camY + sy);
+
+  // aim hint
+  if (player.mode === 'orbit' && (state === 'play' || state === 'menu')){
+    const len = score < 3 ? 120 : 45;
+    const dx = player.dir * -Math.sin(player.a), dy = player.dir * Math.cos(player.a);
+    ctx.setLineDash([4,7]); ctx.lineWidth = 1.5;
+    ctx.strokeStyle = `rgba(125,249,255,${score<3?.5:.25})`;
+    ctx.beginPath(); ctx.moveTo(player.x, player.y); ctx.lineTo(player.x+dx*len, player.y+dy*len); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  for (const p of planets) drawPlanet(p);
+
+  for (const s of stars){
+    if (s.taken) continue;
+    s.rot += .02;
+    drawSpark(s.x, s.y, 9 + Math.sin(t*4+s.rot)*1.5, s.rot);
+  }
+
+  // trail
+  const tr = player.trail;
+  if (state !== 'dying' && state !== 'dead'){
+    for (let i=1;i<tr.length;i++){
+      ctx.strokeStyle = `rgba(125,249,255,${i/tr.length*.6})`;
+      ctx.lineWidth = i/tr.length*4;
+      ctx.beginPath(); ctx.moveTo(tr[i-1].x,tr[i-1].y); ctx.lineTo(tr[i].x,tr[i].y); ctx.stroke();
+    }
+    ctx.shadowColor = '#7df9ff'; ctx.shadowBlur = 18;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(player.x, player.y, 6, 0, TAU); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  for (const q of particles){
+    ctx.fillStyle = `rgba(${q.c},${Math.max(0,q.life/q.max)})`;
+    ctx.beginPath(); ctx.arc(q.x, q.y, q.s, 0, TAU); ctx.fill();
+  }
+  ctx.textAlign = 'center';
+  ctx.font = '700 15px Manrope, system-ui, sans-serif';
+  for (const q of popups){
+    ctx.fillStyle = `rgba(${q.c},${Math.max(0,q.life)})`;
+    ctx.fillText(q.txt, q.x, q.y);
+  }
+  ctx.restore();
+}
+
+function drawPlanet(p){
+  const active = p === cur;
+  // orbit ring
+  ctx.setLineDash([3,6]);
+  ctx.lineWidth = active ? 1.6 : 1.2;
+  ctx.strokeStyle = active ? `rgba(${hsl(p.h,p.s,75,true)},.55)` : `rgba(${hsl(p.h,p.s,75,true)},.35)`;
+  ctx.beginPath(); ctx.arc(p.x, p.y, p.R, 0, TAU); ctx.stroke();
+  ctx.setLineDash([]);
+  // glow
+  const glow = ctx.createRadialGradient(p.x,p.y,p.r*.5,p.x,p.y,p.r*2.2);
+  glow.addColorStop(0, `rgba(${hsl(p.h,p.s,60,true)},.35)`); glow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*2.2,0,TAU); ctx.fill();
+  // ring behind
+  if (p.ringed) drawRingHalf(p, true);
+  // body
+  const b = ctx.createRadialGradient(p.x-p.r*.4, p.y-p.r*.4, p.r*.1, p.x, p.y, p.r);
+  b.addColorStop(0, hsl(p.h, p.s, 78)); b.addColorStop(.6, hsl(p.h, p.s, 52)); b.addColorStop(1, hsl(p.h, p.s, 26));
+  ctx.fillStyle = b; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,TAU); ctx.fill();
+  // band
+  ctx.save(); ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,TAU); ctx.clip();
+  ctx.fillStyle = `rgba(255,255,255,.08)`;
+  ctx.fillRect(p.x-p.r, p.y-p.r*.15, p.r*2, p.r*.22);
+  ctx.fillRect(p.x-p.r, p.y+p.r*.35, p.r*2, p.r*.12);
+  ctx.restore();
+  if (p.ringed) drawRingHalf(p, false);
+  // moon
+  if (p.moon){
+    const mx = p.x + Math.cos(p.moon.a)*p.R, my = p.y + Math.sin(p.moon.a)*p.R;
+    ctx.shadowColor = '#ff5d73'; ctx.shadowBlur = 14;
+    const mg = ctx.createRadialGradient(mx-2,my-2,1,mx,my,7);
+    mg.addColorStop(0,'#ffd0d6'); mg.addColorStop(1,'#c23a52');
+    ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(mx,my,7,0,TAU); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+}
+
+function drawRingHalf(p, back){
+  ctx.save();
+  ctx.translate(p.x,p.y); ctx.rotate(p.tilt);
+  ctx.strokeStyle = `rgba(${hsl(p.h,p.s,82,true)},.6)`; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  if (back) ctx.ellipse(0,0,p.r*1.7,p.r*.45,0,Math.PI,TAU);
+  else ctx.ellipse(0,0,p.r*1.7,p.r*.45,0,0,Math.PI);
+  ctx.stroke(); ctx.restore();
+}
+
+function drawSpark(x,y,s,rot){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot);
+  ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 16; ctx.fillStyle = '#ffd166';
+  ctx.beginPath();
+  for (let i=0;i<8;i++){
+    const r = i%2 ? s*.35 : s, a = i*Math.PI/4;
+    ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+  }
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+
+/* ---------- loop & input ---------- */
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(.033, (now-last)/1000); last = now;
+  step(dt); draw();
+  requestAnimationFrame(frame);
+}
+
+cv.addEventListener('pointerdown', e => { e.preventDefault(); jump(); });
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'Enter'){
+    e.preventDefault();
+    if (state === 'play') jump(); else if (state === 'menu' || (state === 'dead' && !over.hidden)) start();
+  }
+});
+$('startBtn').addEventListener('click', start);
+$('againBtn').addEventListener('click', start);
+over.addEventListener('pointerdown', e => { if (e.target === over) start(); });
+
+state = 'menu';
+reset();
+$('menuBest').textContent = best ? 'Твой рекорд: ' + best : '';
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
