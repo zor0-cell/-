@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111b2e">
+<title>Киберщит</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: security-operations console; sticky status bar (server integrity), one incident card at a time, debrief below */
+:root{
+  --bg:#0b1220;
+  --panel:#111b2e;
+  --panel-2:#16233a;
+  --line:#22324d;
+  --text:#e3e9f3;
+  --muted:#8a9ab3;
+  --shield:#4fd1c5;
+  --alert:#ffb547;
+  --breach:#ff5c7a;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--panel);z-index:10}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border-bottom:1px solid var(--line)}
+.bar-in{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:8px;
+  padding-block:10px;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
+.bar-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-family:var(--mono);font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.bar-top b{color:var(--text)}
+.brand{font-weight:700;color:var(--shield)!important;letter-spacing:.04em}
+.hp{height:8px;background:#0a101c;border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+.hp i{display:block;height:100%;background:var(--shield);transition:width .5s, background .5s}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px;
+  padding-block:16px 32px;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.tag{align-self:flex-start;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 8px;border-radius:6px;border:1px solid}
+.tag.defend{color:var(--alert);border-color:rgba(255,181,71,.45)}
+.tag.spot{color:#9ab6ff;border-color:rgba(154,182,255,.45)}
+.tag.phish{color:var(--breach);border-color:rgba(255,92,122,.45)}
+h1,h2{margin:0;text-wrap:balance}
+h1{font-size:20px;line-height:1.25}
+h2{font-size:15px;font-family:var(--mono);color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+p{margin:0}
+.muted{color:var(--muted)}
+.term{background:#070c16;border:1px solid var(--line);border-radius:10px;font-family:var(--mono);font-size:13px;line-height:1.55;overflow-x:auto;min-width:0}
+.term pre{margin:0;padding:12px;white-space:pre}
+.term .hd{font-size:11px;color:var(--muted);padding:6px 12px;border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.08em}
+.lines{display:flex;flex-direction:column;padding:6px 0}
+.ln{display:flex;gap:12px;text-align:left;background:none;border:0;border-left:3px solid transparent;color:var(--text);font:inherit;padding:6px 12px;cursor:pointer;white-space:pre;min-width:max-content}
+.ln span{color:#4b5d7a;user-select:none}
+.ln:hover{background:rgba(154,182,255,.06)}
+.ln.right{background:rgba(79,209,197,.12);border-left-color:var(--shield)}
+.ln.wrong{background:rgba(255,92,122,.12);border-left-color:var(--breach)}
+.mail{background:#f4f6fa;color:#1d2433;border-radius:10px;overflow:hidden;font-size:14px}
+.mail .mh{padding:10px 12px;border-bottom:1px solid #d9dee8;display:grid;gap:2px;font-size:13px}
+.mail .mh b{font-weight:700}
+.mail .mb{padding:12px;display:flex;flex-direction:column;gap:8px}
+.mail .lnk{color:#1a56db;text-decoration:underline;word-break:break-all}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{text-align:left;background:var(--panel-2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:12px 14px;font:inherit;cursor:pointer;display:flex;gap:10px;align-items:flex-start}
+.opt:hover:not(:disabled){border-color:#3a5078}
+.opt .k{font-family:var(--mono);font-weight:700;color:var(--muted);flex:none}
+.opt.right{border-color:var(--shield);background:rgba(79,209,197,.1)}
+.opt.wrong{border-color:var(--breach);background:rgba(255,92,122,.1)}
+.opt:disabled{cursor:default}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.verdict{border-radius:12px;padding:14px;display:flex;gap:12px;align-items:center;font-weight:700}
+.verdict.ok{background:rgba(79,209,197,.12);border:1px solid var(--shield);color:var(--shield)}
+.verdict.bad{background:rgba(255,92,122,.12);border:1px solid var(--breach);color:var(--breach)}
+.verdict small{display:block;font-weight:400;color:var(--text)}
+.deb{display:flex;flex-direction:column;gap:14px}
+.deb section{display:flex;flex-direction:column;gap:6px}
+.deb h3{margin:0;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.h-hack{color:var(--breach)} .h-why{color:var(--alert)} .h-res{color:#c4a7ff} .h-def{color:var(--shield)}
+.btn{font-family:var(--mono);font-weight:700;font-size:15px;padding:14px 18px;border-radius:10px;border:0;cursor:pointer;background:var(--shield);color:#06201d}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--text)}
+button:focus-visible{outline:2px solid var(--alert);outline-offset:2px}
+.hero{display:flex;flex-direction:column;gap:14px}
+.hero h1{font-size:30px;font-family:var(--mono);letter-spacing:-.02em}
+.hero h1 span{color:var(--shield)}
+ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.law{border-left:3px solid var(--alert);padding:8px 12px;background:rgba(255,181,71,.07);border-radius:0 8px 8px 0;font-size:14px}
+.big{font-family:var(--mono);font-size:48px;font-weight:700;line-height:1}
+.recap{display:flex;flex-direction:column;gap:8px}
+.recap div{display:flex;gap:10px;font-size:14px}
+.recap b{font-family:var(--mono);flex:none;width:18px}
+.shake{animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@media (prefers-reduced-motion: reduce){.shake{animation:none}.hp i{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="bar" id="bar">
+  <div class="bar-in">
+    <div class="bar-top"><span class="brand">КИБЕРЩИТ</span><span>Инцидент <b id="num">0/12</b></span><span>Очки <b id="pts">0</b></span></div>
+    <div class="hp" role="meter" aria-label="Защита сервера" aria-valuemin="0" aria-valuemax="100" id="hpm"><i id="hp" style="width:100%"></i></div>
+  </div>
+</div>
+
+<main class="wrap" id="app"></main>
+
+<script>
+(() => {
+const app = document.getElementById('app');
+
+/* Each incident: type defend | spot | phish.
+   Debrief: hack (что написал хакер), why (почему сработало), res (что будет без защиты), def (как защититься), fix (безопасный код или правило) */
+const MISSIONS = [
+{ type:'phish', topic:'Фишинг', title:'Письмо из «банка»',
+  text:'Сотруднику пришло письмо. Это настоящее письмо или фишинг?',
+  mail:{ from:'Служба безопасности <support@nadezhny-bank-security.top>', subj:'СРОЧНО: ваш счёт будет заблокирован',
+    body:['Здравствуйте!','Мы заметили подозрительную активность. Если вы не подтвердите данные в течение 1 часа, счёт будет заблокирован навсегда.','Введите логин, пароль и код из СМС по ссылке:'],
+    link:'http://nadezhny-bank.login-verify.top/confirm' },
+  answer:'phish',
+  hack:'Хакер не пишет код. Он пишет письмо, которое давит на страх и спешку, и ведёт на поддельную страницу входа.',
+  why:'Домен отправителя и ссылки чужой (.top вместо адреса банка), письмо требует срочности и просит пароль и код из СМС. Настоящий банк никогда не просит сообщить их.',
+  res:'Человек вводит пароль и код на поддельном сайте, хакер сразу входит в настоящий аккаунт и выводит деньги.',
+  def:'Проверяй адрес отправителя и ссылки, не переходи по ссылкам из тревожных писем, заходи на сайт банка вручную или звони по номеру с карты. Включи двухфакторную защиту.',
+  fix:'Правило: срочность + просьба ввести пароль = почти всегда фишинг.' },
+
+{ type:'defend', topic:'Подбор пароля', title:'Тысячи попыток входа',
+  text:'В журнале сервера за одну минуту появились тысячи попыток войти в аккаунт admin. Что сделать?',
+  log:'14:02:01  login admin  pass=123456     FAIL\n14:02:01  login admin  pass=password   FAIL\n14:02:01  login admin  pass=qwerty     FAIL\n14:02:02  login admin  pass=admin2024  FAIL\n...       ещё 4 812 попыток за 60 секунд',
+  opts:[
+    ['Ограничить число попыток, добавить задержку или капчу и включить двухфакторный вход', true],
+    ['Убрать кнопку «Войти» с главной страницы', false],
+    ['Перезагрузить сервер', false],
+    ['Написать в журнале «хакерам вход запрещён»', false] ],
+  hack:'Программа-перебор (брутфорс) подставляет пароли из списка самых популярных: 123456, qwerty, password…',
+  why:'Сервер разрешает бесконечно пробовать пароли, а у админа слабый пароль из словаря.',
+  res:'Рано или поздно пароль подберут, и хакер получит полный доступ к сайту.',
+  def:'Лимит попыток с одного адреса, растущая задержка, капча, блокировка после N ошибок, двухфакторная аутентификация и длинные уникальные пароли.',
+  fix:'if (failed_attempts(ip) > 5) {\n  block(ip, minutes = 15)\n}\nrequire_2fa(user)' },
+
+{ type:'defend', topic:'Хранение паролей', title:'Утечка базы',
+  text:'База пользователей утекла в интернет. Пароли в ней лежали открытым текстом. Как надо было их хранить?',
+  log:'id | login   | password\n 1 | anna    | Kotik2010\n 2 | maks    | 12345678\n 3 | admin   | Adm!n_2024',
+  opts:[
+    ['Хранить только медленный хэш с солью (bcrypt или Argon2)', true],
+    ['Закодировать пароли в Base64', false],
+    ['Хэшировать MD5 без соли', false],
+    ['Переложить пароли в отдельную таблицу', false] ],
+  hack:'Хакеру даже не нужно ничего писать: он просто читает таблицу и пробует эти пароли на других сайтах.',
+  why:'Пароли хранились как есть. Base64 это не шифрование, он раскодируется за секунду. MD5 считается так быстро, что миллиарды вариантов перебираются за минуты.',
+  res:'Украдены все аккаунты. Люди часто используют один пароль везде, поэтому пострадают и их почта, и соцсети.',
+  def:'Сохранять только результат медленной хэш-функции с уникальной солью. При входе хэшировать введённый пароль и сравнивать хэши. Сам пароль сервер не хранит.',
+  fix:'hash = bcrypt.hash(password, cost = 12)\n# при входе:\nbcrypt.verify(entered, hash)' },
+
+{ type:'spot', topic:'SQL-инъекция', title:'Код-ревью: форма входа',
+  text:'Найди строку, через которую хакер может войти без пароля. Нажми на неё.',
+  code:['username = form["login"]','password = form["password"]','query = "SELECT * FROM users WHERE login=\'" + username + "\' AND pass=\'" + password + "\'"','user = db.execute(query)','if user: allow_login()'],
+  answer:2,
+  hack:"В поле логина хакер пишет:  admin' --",
+  why:"Ввод склеивается прямо с текстом запроса. Получается  WHERE login='admin' --' AND pass='…'. Два минуса в SQL начинают комментарий, и проверка пароля просто отрезается.",
+  res:'Вход под администратором без пароля. Похожим приёмом можно прочитать или удалить всю базу.',
+  def:'Никогда не склеивать SQL с вводом пользователя. Использовать параметризованные запросы: база получает данные отдельно от команды и не выполняет их как код.',
+  fix:'db.execute(\n  "SELECT * FROM users WHERE login = ?",\n  (username,)\n)\n# пароль проверять через bcrypt.verify' },
+
+{ type:'defend', topic:'SQL-инъекция', title:'Странный ввод в поиске',
+  text:"В поле поиска товаров кто-то ввёл  ' OR '1'='1  и сайт показал все скрытые товары и заказы. Как исправить?",
+  log:"GET /search?q=' OR '1'='1\nSQL: SELECT * FROM goods WHERE name = '' OR '1'='1'\n→ возвращено 18 233 строки (включая скрытые)",
+  opts:[
+    ['Перейти на параметризованные запросы во всём коде', true],
+    ['Удалять из ввода слово OR', false],
+    ['Запретить в поиске кавычки, но только на главной странице', false],
+    ['Увеличить максимальную длину поля поиска', false] ],
+  hack:"' OR '1'='1",
+  why:"Условие '1'='1' всегда истинно, поэтому WHERE пропускает все строки таблицы.",
+  res:'Утечка всех данных, включая чужие заказы, адреса и телефоны.',
+  def:'Параметризованные запросы. Чёрные списки слов не работают: хакер напишет oR, || или закодирует символы. Дополнительно: у учётной записи базы должно быть минимум прав.',
+  fix:'db.execute("SELECT * FROM goods WHERE name = ?", (q,))' },
+
+{ type:'spot', topic:'XSS', title:'Код-ревью: комментарии',
+  text:'Пользователи могут оставлять комментарии. Найди строку, из-за которой хакер может запустить свой скрипт в браузере других людей.',
+  code:['text = form["comment"]','save_to_db(text)','for c in comments:','  html += "<div class=\'c\'>" + c.text + "</div>"','return page(html)'],
+  answer:3,
+  hack:'Вместо комментария хакер пишет:  <script>steal(document.cookie)<\/script>',
+  why:'Текст комментария вставляется в HTML как есть, поэтому браузер считает его кодом и выполняет.',
+  res:'Каждый, кто откроет страницу, отдаст хакеру свою сессию. Хакер войдёт в их аккаунты без пароля.',
+  def:'Экранировать всё, что пришло от пользователя, перед выводом (< превращается в &lt;). В JavaScript использовать textContent, а не innerHTML. Ставить cookie флаг HttpOnly и включать Content-Security-Policy.',
+  fix:'html += "<div class=\'c\'>" + escape(c.text) + "</div>"\n// в JS: el.textContent = c.text' },
+
+{ type:'phish', topic:'Фишинг', title:'Письмо от школы',
+  text:'Пришло письмо со школьного портала. Фишинг или настоящее?',
+  mail:{ from:'Школьный портал <noreply@school12.edu.ru>', subj:'Изменение расписания на четверг',
+    body:['Добрый день!','В четверг 3-й урок перенесён в кабинет 214. Актуальное расписание опубликовано в личном кабинете.','Пароль и коды мы никогда не запрашиваем.'],
+    link:'https://school12.edu.ru/schedule' },
+  answer:'legit',
+  hack:'Здесь нет атаки. Важно уметь отличать обычные письма от фишинга, а не бояться всех подряд.',
+  why:'Адрес отправителя и ссылки совпадают с официальным доменом школы, ссылка через https, нет срочности и никто не просит пароль.',
+  res:'Если считать опасным всё подряд, можно пропустить важное. Если не проверять ничего, попадёшься на фишинг.',
+  def:'Проверяй домен, протокол, тон письма и то, что у тебя просят. Сомневаешься? Открой сайт вручную, а не по ссылке.',
+  fix:'Чек-лист: домен совпадает? https? нет срочности? не просят пароль? → скорее всего, письмо настоящее.' },
+
+{ type:'defend', topic:'Социальная инженерия', title:'Звонок «из техподдержки»',
+  text:'Сотруднику звонят: «Я из техподдержки, у вас взломан аккаунт. Продиктуйте код, который сейчас придёт по СМС, чтобы мы его защитили». Что правильно?',
+  log:'[входящий звонок]  +7 9XX XXX-XX-XX\n«...срочно продиктуйте код, иначе данные удалятся...»\n[СМС] Код для входа: 4 8 1 5. Никому его не сообщайте.',
+  opts:[
+    ['Ничего не сообщать, положить трубку и самому позвонить в поддержку по официальному номеру', true],
+    ['Продиктовать код, раз звонят из поддержки', false],
+    ['Продиктовать только первые две цифры', false],
+    ['Попросить звонящего назвать своё имя и потом сообщить код', false] ],
+  hack:'Хакер «пишет» сценарий разговора: давит на срочность и представляется кем-то, кому доверяют.',
+  why:'Код из СМС это ключ от аккаунта. Хакер уже ввёл пароль и ждёт только второй фактор.',
+  res:'Аккаунт сразу захвачен, и двухфакторная защита не помогла, потому что человек сам отдал код.',
+  def:'Никому не сообщать коды и пароли, даже «поддержке». Настоящая поддержка их никогда не спрашивает. Перезванивать самому по официальному номеру.',
+  fix:'Правило: код из СМС нужен только тебе и только на сайте, который ты открыл сам.' },
+
+{ type:'spot', topic:'Path traversal', title:'Код-ревью: скачивание файлов',
+  text:'Сервис отдаёт файлы по имени. Найди строку, через которую можно прочитать любые файлы сервера.',
+  code:['name = request.args["file"]','path = "/srv/uploads/" + name','if not exists(path): return 404','return send_file(path)'],
+  answer:1,
+  hack:'Хакер запрашивает:  ?file=../../etc/passwd',
+  why:'«../» значит «подняться на папку выше». Склеенный путь выходит из папки uploads в системные папки.',
+  res:'Чтение конфигов, паролей к базе и ключей сервера.',
+  def:'Не склеивать путь с вводом. Брать только имя файла, проверять, что итоговый путь остаётся внутри разрешённой папки, а лучше выдавать файлы по ID из базы.',
+  fix:'safe = realpath(join(UPLOADS, basename(name)))\nif not safe.startswith(UPLOADS):\n    return 403' },
+
+{ type:'defend', topic:'Обновления', title:'Старая версия',
+  text:'Сканер нашёл на сервере веб-движок версии 2.1, в которой давно известна опасная уязвимость. Исправление вышло полгода назад. Что делать?',
+  log:'scan: web-engine 2.1.0 detected\n  ! известная уязвимость: удалённое выполнение кода\n  ✓ исправлено в версии 2.1.7 (вышла 6 месяцев назад)',
+  opts:[
+    ['Обновиться до исправленной версии и настроить регулярные обновления', true],
+    ['Скрыть номер версии в ответах сервера и больше ничего не делать', false],
+    ['Подождать, пока кто-нибудь взломает, и тогда обновить', false],
+    ['Сменить пароль администратора', false] ],
+  hack:'Хакеру не нужно ничего придумывать: для известных уязвимостей есть готовые инструменты, которые сами ищут старые версии.',
+  why:'Описание уязвимости публичное, а сервер так и не обновили.',
+  res:'Хакер выполняет свои команды на сервере. Это полный захват.',
+  def:'Своевременно ставить обновления, следить за бюллетенями безопасности, удалять неиспользуемые программы. Скрытие версии без обновления не защищает.',
+  fix:'Правило: вышел патч безопасности → обнови в ближайшие дни, а не через полгода.' },
+
+{ type:'defend', topic:'HTTPS', title:'Вход в кафе',
+  text:'Сайт принимает логин и пароль по http://, без шифрования. Пользователь заходит через открытый Wi-Fi в кафе. Как защитить?',
+  log:'POST http://shop.example/login\nlogin=anna&password=Kotik2010\n(видно всем в той же сети)',
+  opts:[
+    ['Включить HTTPS (TLS) на всём сайте и перенаправлять с http на https', true],
+    ['Попросить пользователей не заходить из кафе', false],
+    ['Сделать поле пароля со звёздочками', false],
+    ['Добавить на страницу картинку замка', false] ],
+  hack:'Хакер в той же сети запускает перехватчик трафика и читает всё, что идёт по http.',
+  why:'Без шифрования данные идут по сети открытым текстом. Звёздочки скрывают пароль только на экране.',
+  res:'Пароль перехвачен, аккаунт украден.',
+  def:'HTTPS везде, автоматическое перенаправление на https, заголовок HSTS. Пользователям: не вводить пароли на сайтах без https.',
+  fix:'Strict-Transport-Security: max-age=31536000' },
+
+{ type:'spot', topic:'Секреты в коде', title:'Код-ревью: перед публикацией',
+  text:'Разработчик хочет выложить проект в открытый репозиторий. Найди строку, которую публиковать нельзя.',
+  code:['import payments','API_KEY = "pay-secret-7f3a9c21e0"','def pay(order):','    return payments.charge(order.total, key=API_KEY)'],
+  answer:1,
+  hack:'Хакер не пишет ничего: боты сами сканируют открытые репозитории и ищут строки, похожие на ключи.',
+  why:'Секретный ключ платёжной системы записан прямо в код. После публикации его увидит кто угодно.',
+  res:'Через несколько минут ключ найдут и будут проводить платежи от имени компании.',
+  def:'Хранить секреты в переменных окружения или хранилище секретов, добавить файлы с ними в .gitignore. Если ключ утёк, сразу отозвать его и выпустить новый.',
+  fix:'API_KEY = os.environ["PAYMENTS_KEY"]' }
+];
+
+let i = 0, hp = 100, pts = 0, results = [];
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function setBar(){
+  $('num').textContent = Math.min(i+1, MISSIONS.length) + '/' + MISSIONS.length;
+  $('pts').textContent = pts;
+  const el = $('hp'); el.style.width = hp + '%';
+  el.style.background = hp > 50 ? 'var(--shield)' : hp > 25 ? 'var(--alert)' : 'var(--breach)';
+  $('hpm').setAttribute('aria-valuenow', hp);
+}
+
+/* ---------- sound ---------- */
+let ac = null;
+function beep(f, d, type='sine', vol=.06){
+  try {
+    if (!ac) ac = new (window.AudioContext||window.webkitAudioContext)();
+    const t0 = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = f; g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(.0001, t0+d);
+    o.connect(g).connect(ac.destination); o.start(t0); o.stop(t0+d+.02);
+  } catch(e) {}
+}
+
+function intro(){
+  $('bar').hidden = true;
+  app.innerHTML = `
+  <div class="card hero">
+    <h1>Кибер<span>щит</span></h1>
+    <p>Ты дежурный по безопасности. На сервер компании идут атаки. В каждом инциденте нужно понять, что делает хакер, и выбрать правильную защиту.</p>
+    <ul class="plain muted">
+      <li><b style="color:var(--alert)">Атака</b>: выбери, как защититься</li>
+      <li><b style="color:#9ab6ff">Код-ревью</b>: найди уязвимую строку кода</li>
+      <li><b style="color:var(--breach)">Почта</b>: отличи фишинг от настоящего письма</li>
+    </ul>
+    <p>После каждого инцидента будет разбор: <b>что написал хакер, почему это сработало, что было бы без защиты и как защищаться</b>.</p>
+    <p class="muted">Ошибка снимает 25% защиты сервера. Если защита упадёт до нуля, сервер взломан.</p>
+    <div class="law">Эти знания нужны для защиты. Атаковать чужие сайты и аккаунты без разрешения владельца нельзя: это уголовное преступление (ст. 272 УК РФ). Тренироваться можно только на своих учебных стендах и в CTF-соревнованиях.</div>
+    <button class="btn" id="go">Начать дежурство</button>
+  </div>`;
+  $('go').onclick = () => { i = 0; hp = 100; pts = 0; results = []; $('bar').hidden = false; show(); };
+}
+
+function show(){
+  setBar();
+  const m = MISSIONS[i];
+  const tagName = { defend:'Атака', spot:'Код-ревью', phish:'Почта' }[m.type];
+  let body = '';
+  if (m.type === 'defend'){
+    const opts = m.opts.map((o,k) => ({ t:o[0], ok:o[1], k })).sort(() => Math.random() - .5);
+    body = `<div class="term"><div class="hd">журнал</div><pre>${esc(m.log)}</pre></div>
+      <div class="opts">${opts.map((o,n) => `<button class="opt" data-ok="${o.ok}"><span class="k">${'ABCD'[n]}</span><span>${esc(o.t)}</span></button>`).join('')}</div>`;
+  } else if (m.type === 'spot'){
+    body = `<div class="term"><div class="hd">server.py</div><div class="lines">${m.code.map((l,n) =>
+      `<button class="ln" data-n="${n}"><span>${n+1}</span>${esc(l)}</button>`).join('')}</div></div>`;
+  } else {
+    const ml = m.mail;
+    body = `<div class="mail"><div class="mh"><div><b>От:</b> ${esc(ml.from)}</div><div><b>Тема:</b> ${esc(ml.subj)}</div></div>
+      <div class="mb">${ml.body.map(p => `<p>${esc(p)}</p>`).join('')}<span class="lnk">${esc(ml.link)}</span></div></div>
+      <div class="two"><button class="opt" data-v="phish"><span>🎣 Фишинг</span></button><button class="opt" data-v="legit"><span>✓ Настоящее</span></button></div>`;
+  }
+  app.innerHTML = `<div class="card" id="mc">
+    <span class="tag ${m.type}">${tagName} · ${esc(m.topic)}</span>
+    <h1>${esc(m.title)}</h1>
+    <p class="muted">${esc(m.text)}</p>
+    ${body}
+  </div><div id="after"></div>`;
+  window.scrollTo(0,0);
+
+  if (m.type === 'defend') app.querySelectorAll('.opt').forEach(b => b.onclick = () => {
+    const ok = b.dataset.ok === 'true';
+    app.querySelectorAll('.opt').forEach(x => { x.disabled = true; if (x.dataset.ok === 'true') x.classList.add('right'); });
+    if (!ok) b.classList.add('wrong');
+    resolve(ok);
+  });
+  if (m.type === 'spot') app.querySelectorAll('.ln').forEach(b => b.onclick = () => {
+    const ok = +b.dataset.n === m.answer;
+    app.querySelectorAll('.ln').forEach(x => { x.disabled = true; if (+x.dataset.n === m.answer) x.classList.add('right'); });
+    if (!ok) b.classList.add('wrong');
+    resolve(ok);
+  });
+  if (m.type === 'phish') app.querySelectorAll('.opt').forEach(b => b.onclick = () => {
+    const ok = b.dataset.v === m.answer;
+    app.querySelectorAll('.opt').forEach(x => { x.disabled = true; if (x.dataset.v === m.answer) x.classList.add('right'); });
+    if (!ok) b.classList.add('wrong');
+    resolve(ok);
+  });
+}
+
+function resolve(ok){
+  const m = MISSIONS[i];
+  results.push({ topic:m.topic, title:m.title, ok, def:m.def });
+  if (ok){ pts += 100; beep(660,.12); setTimeout(()=>beep(990,.18),100); }
+  else { hp = Math.max(0, hp - 25); beep(160,.35,'sawtooth',.05); $('mc').classList.add('shake'); try { navigator.vibrate && navigator.vibrate(100); } catch(e) {} }
+  setBar();
+  const last = i === MISSIONS.length - 1 || hp <= 0;
+  $('after').innerHTML = `
+  <div class="card">
+    <div class="verdict ${ok ? 'ok' : 'bad'}">
+      <div>${ok ? 'Атака отражена' : 'Защита пробита: −25%'}
+      <small>${ok ? '+100 очков' : 'Правильный ответ подсвечен зелёным. Прочитай разбор.'}</small></div>
+    </div>
+    <div class="deb">
+      <section><h3 class="h-hack">Что написал хакер</h3><div class="term"><pre>${esc(m.hack)}</pre></div></section>
+      <section><h3 class="h-why">Почему это сработало</h3><p>${esc(m.why)}</p></section>
+      <section><h3 class="h-res">Что будет без защиты</h3><p>${esc(m.res)}</p></section>
+      <section><h3 class="h-def">Как защищаться</h3><p>${esc(m.def)}</p><div class="term"><div class="hd">правильно</div><pre>${esc(m.fix)}</pre></div></section>
+    </div>
+    <button class="btn" id="next">${last ? 'Итоги дежурства' : 'Следующий инцидент →'}</button>
+  </div>`;
+  $('after').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'start' });
+  $('next').onclick = () => { if (last) finish(); else { i++; show(); } };
+}
+
+function finish(){
+  const right = results.filter(r => r.ok).length;
+  const hacked = hp <= 0;
+  const rank = hacked ? 'Сервер взломан' : right === MISSIONS.length ? 'Эксперт по безопасности' : right >= 9 ? 'Аналитик SOC' : right >= 6 ? 'Младший аналитик' : 'Стажёр';
+  let best = 0; try { best = +localStorage.getItem('kibershchit-best') || 0; } catch(e) {}
+  if (pts > best){ best = pts; try { localStorage.setItem('kibershchit-best', pts); } catch(e) {} }
+  app.innerHTML = `
+  <div class="card">
+    <h2>Итоги дежурства</h2>
+    <div class="big" style="color:${hacked ? 'var(--breach)' : 'var(--shield)'}">${right}/${results.length}</div>
+    <h1>${rank}</h1>
+    <p class="muted">Очки: ${pts} · рекорд: ${best} · защита сервера: ${hp}%${hacked && results.length < MISSIONS.length ? ` · пройдено инцидентов: ${results.length} из ${MISSIONS.length}` : ''}</p>
+  </div>
+  <div class="card">
+    <h2>Шпаргалка защитника</h2>
+    <div class="recap">${results.map(r => `<div><b style="color:${r.ok ? 'var(--shield)' : 'var(--breach)'}">${r.ok ? '✓' : '✗'}</b><span><b style="width:auto;font-family:var(--body)">${esc(r.topic)}:</b> ${esc(r.def)}</span></div>`).join('')}</div>
+  </div>
+  <button class="btn" id="again">Новое дежурство</button>`;
+  window.scrollTo(0,0);
+  $('again').onclick = () => { i = 0; hp = 100; pts = 0; results = []; show(); };
+}
+
+intro();
+})();
+</script>
+</body>
+</html>
