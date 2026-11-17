@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#f6d3e3">
+<title>Конфетный цех</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Rubik:wght@500;700&display=swap">
+<style>
+/* Layout: one-screen candy factory; conveyor down the middle, two jars below, HUD pinned top, overlays centered */
+:root{
+  --wall:#f6d3e3;
+  --wall-2:#efc2d8;
+  --belt:#3b3350;
+  --ink:#2c2140;
+  --soft:#7a5f86;
+  --cream:#fff7fb;
+  --berry:#ff4f86;
+  --display:"Rubik Mono One", "Arial Black", system-ui, sans-serif;
+  --body:"Rubik", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme:light;
+}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none}
+body{background:var(--wall);color:var(--ink);font-family:var(--body);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:fixed;inset:0 0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  padding-top:calc(env(safe-area-inset-top,0px) + 12px);
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));pointer-events:none}
+.score{font-family:var(--display);font-size:38px;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink)}
+.best{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);margin-top:6px}
+.right{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.lives{font-size:22px;letter-spacing:2px;color:var(--berry);line-height:1}
+.mute{pointer-events:auto;background:var(--cream);border:2px solid var(--ink);color:var(--ink);border-radius:12px;width:40px;height:40px;font-size:17px;cursor:pointer}
+.mute:focus-visible,.btn:focus-visible{outline:3px solid var(--berry);outline-offset:3px}
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  padding-block:24px;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));
+  background:rgba(44,33,64,.45)}
+.card{background:var(--cream);border:3px solid var(--ink);border-radius:22px;box-shadow:0 8px 0 var(--ink);
+  padding:26px 22px;max-width:360px;width:100%;display:flex;flex-direction:column;gap:16px;align-items:center;text-align:center}
+.title{font-family:var(--display);font-size:clamp(28px,9vw,40px);line-height:1.05;text-wrap:balance;color:var(--ink)}
+.title span{color:var(--berry)}
+.lead{font-size:15px;line-height:1.5;color:var(--soft);margin:0}
+.lead b{color:var(--ink)}
+.rules{display:grid;gap:10px;font-size:14px;line-height:1.35;text-align:left;width:100%}
+.rules div{display:flex;gap:12px;align-items:center}
+.chip{width:30px;height:22px;border-radius:11px;flex:none;border:2px solid var(--ink)}
+.btn{font-family:var(--display);font-size:16px;color:var(--cream);background:var(--berry);border:3px solid var(--ink);border-radius:16px;padding:14px 30px;cursor:pointer;box-shadow:0 5px 0 var(--ink)}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--ink)}
+.big{font-family:var(--display);font-size:72px;line-height:1;font-variant-numeric:tabular-nums}
+.label{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
+.record{color:var(--berry)}
+.hint{font-size:13px;color:var(--soft)}
+</style>
+</head>
+<body>
+
+<canvas id="c" aria-label="Конвейер с конфетами"></canvas>
+
+<div class="hud">
+  <div>
+    <div class="score" id="score">0</div>
+    <div class="best" id="bestHud">Рекорд 0</div>
+  </div>
+  <div class="right">
+    <div class="lives" id="lives" aria-label="Жизни">♥♥♥</div>
+    <button class="mute" id="mute" aria-label="Звук">♪</button>
+  </div>
+</div>
+
+<div class="overlay" id="menu">
+  <div class="card">
+    <div class="title">Конфетный <span>цех</span></div>
+    <p class="lead">Конфеты едут по ленте. <b>Тапай слева или справа</b>, чтобы отправить нижнюю конфету в банку того же цвета.</p>
+    <div class="rules">
+      <div><span class="chip" style="background:#3a2a25"></span>Горелые не трогай: пусть уедут в брак</div>
+      <div><span class="chip" style="background:linear-gradient(90deg,#ff4f86,#ffc83d,#3fd0a8,#5b7cfa)"></span>Радужная подходит в любую банку: +3</div>
+      <div><span class="chip" style="background:#fff7fb"></span>Каждые 12 очков банки меняются местами</div>
+    </div>
+    <button class="btn" id="startBtn">Начать смену</button>
+    <div class="hint" id="menuBest"></div>
+  </div>
+</div>
+
+<div class="overlay" id="over" hidden>
+  <div class="card">
+    <div class="label">Смена окончена</div>
+    <div class="big" id="finalScore">0</div>
+    <div class="label" id="finalBest">Рекорд 0</div>
+    <div class="hint" id="finalStats"></div>
+    <button class="btn" id="againBtn">Ещё смену</button>
+  </div>
+</div>
+
+<script>
+(() => {
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+let W = 0, H = 0;
+function resize(){
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', resize); resize();
+
+const rand = (a,b) => a + Math.random()*(b-a);
+const TAU = Math.PI*2;
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e) { return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e) {} }
+};
+let best = +store.get('konfety-best') || 0;
+let muted = store.get('konfety-mute') === '1';
+
+/* ---------- sound ---------- */
+let ac = null;
+function initAudio(){ if (!ac) try { ac = new (window.AudioContext||window.webkitAudioContext)(); } catch(e) {} if (ac && ac.state==='suspended') ac.resume(); }
+function tone(f, d, type='sine', vol=.07, f2){
+  if (!ac || muted) return;
+  const t0 = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t0);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0+d);
+  g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(.0001, t0+d);
+  o.connect(g).connect(ac.destination); o.start(t0); o.stop(t0+d+.02);
+}
+const sfx = {
+  toss(){ tone(520,.09,'triangle',.05,780); },
+  plop(n){ const f = 523*Math.pow(2,[0,2,4,7,9,12][n%6]/12); tone(f,.14,'sine',.08); },
+  bad(){ tone(180,.3,'square',.05,90); },
+  burnt(){ tone(140,.18,'triangle',.06,70); },
+  swap(){ tone(660,.1,'square',.03); setTimeout(()=>tone(440,.1,'square',.03),110); setTimeout(()=>tone(880,.16,'square',.03),220); },
+  over(){ tone(392,.2,'triangle',.07); setTimeout(()=>tone(311,.2,'triangle',.07),200); setTimeout(()=>tone(196,.5,'triangle',.07),400); }
+};
+const muteBtn = $('mute');
+muteBtn.textContent = muted ? '×' : '♪';
+muteBtn.addEventListener('pointerdown', e => e.stopPropagation());
+muteBtn.addEventListener('click', e => { e.stopPropagation(); muted = !muted; muteBtn.textContent = muted ? '×' : '♪'; store.set('konfety-mute', muted?'1':'0'); });
+
+/* ---------- palette ---------- */
+const FLAVORS = [
+  { name:'клубника', c:'#ff4f86', d:'#c22a5e', l:'#ffc2d5' },
+  { name:'мята',     c:'#3fd0a8', d:'#1f9576', l:'#bff3e3' },
+  { name:'лимон',    c:'#ffc83d', d:'#d0941a', l:'#fff0b8' },
+  { name:'черника',  c:'#5b7cfa', d:'#3550c4', l:'#cdd8ff' }
+];
+
+/* ---------- state ---------- */
+let state = 'menu', candies, particles, popups, jars, score, lives, streak, sorted, speed, spawnGap, t, shake, banner, nextSwap, flash, beltOffset, overT;
+
+function layout(){
+  return {
+    beltX: W/2, beltW: Math.min(104, W*.26),
+    beltTop: 0, beltEnd: H*.60,
+    jarY: H*.80, jarW: Math.min(120, W*.3), jarH: Math.min(140, H*.17),
+    leftX: W*.2 + 6, rightX: W*.8 - 6
+  };
+}
+
+function reset(){
+  const pair = [0,1,2,3].sort(() => Math.random()-.5).slice(0,2);
+  jars = [
+    { f: pair[0], side: 0, x: 0, fill: 0, wob: 0 },
+    { f: pair[1], side: 1, x: 0, fill: 0, wob: 0 }
+  ];
+  const L = layout(); jars[0].x = L.leftX; jars[1].x = L.rightX;
+  candies = []; particles = []; popups = [];
+  score = 0; lives = 3; streak = 0; sorted = 0; t = 0; shake = 0; flash = 0;
+  speed = 75; spawnGap = 100; nextSwap = 12; banner = null; beltOffset = 0;
+  updateHud();
+}
+
+function updateHud(){
+  $('score').textContent = score;
+  $('bestHud').textContent = 'Рекорд ' + best;
+  $('lives').textContent = '♥'.repeat(Math.max(0,lives)) + '♡'.repeat(Math.max(0,3-lives));
+}
+
+function spawn(){
+  let kind;
+  const r = Math.random();
+  const burntChance = score < 4 ? 0 : Math.min(.28, .12 + score*.004);
+  const rainbowChance = score < 20 ? 0 : .06;
+  if (r < burntChance) kind = 'burnt';
+  else if (r < burntChance + rainbowChance) kind = 'rainbow';
+  else kind = jars[Math.random() < .5 ? 0 : 1].f;
+  candies.push({ kind, y: -30, x: W/2, mode: 'belt', rot: rand(-.25,.25), t: 0 });
+}
+
+function jarOnSide(side){ return jars.find(j => j.side === side); }
+
+function front(){
+  let f = null;
+  for (const c of candies) if (c.mode === 'belt' && c.y > 10 && (!f || c.y > f.y)) f = c;
+  return f;
+}
+
+function sendTo(side){
+  if (state !== 'play') return;
+  const c = front(); if (!c) return;
+  const jar = jarOnSide(side);
+  if (c.kind === 'burnt'){
+    mistake(c, 'Горелую не берём!');
+    return;
+  }
+  const ok = c.kind === 'rainbow' || c.kind === jar.f;
+  c.mode = 'fly'; c.t = 0; c.sx = c.x; c.sy = c.y; c.jar = jar; c.ok = ok;
+  sfx.toss();
+}
+
+function land(c){
+  const jar = c.jar;
+  if (c.ok){
+    streak++; sorted++;
+    let gain = c.kind === 'rainbow' ? 3 : 1;
+    if (streak >= 10) gain += 1;
+    score += gain;
+    jar.fill = Math.min(1, jar.fill + .06); jar.wob = 1;
+    const col = c.kind === 'rainbow' ? '#ffffff' : FLAVORS[c.kind].c;
+    burst(jar.x, layout().jarY - layout().jarH/2, col, 12, 140);
+    popups.push({ x: jar.x, y: layout().jarY - layout().jarH/2 - 20, txt: '+' + gain + (streak >= 10 ? ' серия!' : ''), life: 1, c: '#2c2140' });
+    sfx.plop(streak);
+    if (jar.fill >= 1){ jar.fill = 0; popups.push({ x: jar.x, y: layout().jarY - 20, txt:'Банка полна! +5', life: 1.3, c:'#ff4f86' }); score += 5; }
+    progress();
+  } else {
+    mistake(c, 'Не та банка');
+  }
+  updateHud();
+}
+
+function progress(){
+  speed = Math.min(230, 75 + score*2.1);
+  spawnGap = Math.max(66, 100 - score*.5);
+  if (score >= nextSwap){
+    nextSwap += 12;
+    jars[0].side ^= 1; jars[1].side ^= 1;
+    banner = { txt: 'Банки поменялись!', life: 1.6 };
+    sfx.swap();
+  }
+}
+
+function mistake(c, txt){
+  c.mode = 'poof';
+  burst(c.x, c.y, '#3a2a25', 16, 160);
+  lives--; streak = 0; shake = 10; flash = .35;
+  popups.push({ x: c.x, y: c.y - 24, txt, life: 1.2, c: '#c22a5e' });
+  sfx.bad();
+  try { navigator.vibrate && navigator.vibrate(80); } catch(e) {}
+  updateHud();
+  if (lives <= 0) endGame();
+}
+
+function endGame(){
+  state = 'dying'; overT = 0;
+  if (score > best){ best = score; store.set('konfety-best', best); }
+}
+
+function showOver(){
+  state = 'dead';
+  sfx.over();
+  $('finalScore').textContent = score;
+  $('finalBest').innerHTML = score >= best && score > 0 ? '<span class="record">Новый рекорд!</span>' : 'Рекорд ' + best;
+  $('finalStats').textContent = 'Разложено конфет: ' + sorted;
+  $('over').hidden = false;
+  updateHud();
+}
+
+function start(){
+  initAudio();
+  $('menu').hidden = true; $('over').hidden = true;
+  reset(); state = 'play';
+}
+
+function burst(x, y, col, n, sp){
+  for (let i=0;i<n;i++){
+    const a = rand(0,TAU), v = rand(sp*.3, sp);
+    particles.push({ x, y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - 60, life: rand(.4,.8), s: rand(2,4.5), c: col });
+  }
+}
+
+/* ---------- update ---------- */
+function step(dt){
+  t += dt;
+  const L = layout();
+  const playing = state === 'play';
+  const beltSpeed = state === 'menu' ? 60 : (playing ? speed : 0);
+  beltOffset = (beltOffset + beltSpeed*dt) % 28;
+
+  // spawn
+  if (state === 'menu' || playing){
+    const top = candies.filter(c => c.mode === 'belt').reduce((m,c) => Math.min(m, c.y), Infinity);
+    if (top === Infinity || top > -30 + spawnGap) spawn();
+  }
+
+  for (const c of candies){
+    c.x = W/2;
+    if (c.mode === 'belt'){
+      c.y += beltSpeed*dt;
+      if (c.y > L.beltEnd){
+        c.mode = 'fall'; c.t = 0;
+        if (state === 'menu'){ /* demo */ }
+        else if (c.kind === 'burnt'){ score += 1; sorted++; popups.push({ x: W/2, y: L.beltEnd - 10, txt:'+1 брак', life: 1, c:'#7a5f86' }); sfx.burnt(); progress(); updateHud(); }
+        else if (playing){ mistake(c, 'Упустил!'); c.mode = 'fall'; }
+      }
+    } else if (c.mode === 'fly'){
+      c.t += dt/.32;
+      const k = Math.min(1, c.t);
+      const ex = c.jar.x, ey = L.jarY - L.jarH*.55;
+      c.x = c.sx + (ex - c.sx)*k;
+      c.y = c.sy + (ey - c.sy)*k - Math.sin(k*Math.PI)*90;
+      c.rot += dt*12;
+      if (k >= 1){ c.mode = 'done'; land(c); }
+    } else if (c.mode === 'fall'){
+      c.t += dt; c.y += (120 + c.t*500)*dt; c.rot += dt*3;
+      if (c.y > L.beltEnd + 70) c.mode = 'done';
+    }
+  }
+  candies = candies.filter(c => c.mode !== 'done' && c.mode !== 'poof');
+
+  // jars slide to their side
+  for (const j of jars){
+    const tx = j.side === 0 ? L.leftX : L.rightX;
+    j.x += (tx - j.x) * Math.min(1, dt*7);
+    j.wob = Math.max(0, j.wob - dt*3);
+  }
+
+  for (const p of particles){ p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 420*dt; p.life -= dt; }
+  particles = particles.filter(p => p.life > 0);
+  for (const p of popups){ p.y -= 34*dt; p.life -= dt; }
+  popups = popups.filter(p => p.life > 0);
+  if (banner){ banner.life -= dt; if (banner.life <= 0) banner = null; }
+  shake *= Math.pow(.01, dt); flash = Math.max(0, flash - dt);
+  if (state === 'dying'){ overT += dt; if (overT > .7) showOver(); }
+}
+
+/* ---------- render ---------- */
+function rr(x,y,w,h,r){ ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x,y,w,h,r) : ctx.rect(x,y,w,h); }
+
+function draw(){
+  const L = layout();
+  // wall with tiles
+  ctx.fillStyle = '#f6d3e3'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = '#efc2d8';
+  for (let y=0; y<H; y+=44) for (let x=((y/44)%2)*22; x<W; x+=44){ ctx.beginPath(); ctx.arc(x, y, 3, 0, TAU); ctx.fill(); }
+  // floor
+  ctx.fillStyle = '#e4aecb'; ctx.fillRect(0, L.jarY + L.jarH*.5 - 6, W, H);
+  ctx.fillStyle = '#d797b9'; ctx.fillRect(0, L.jarY + L.jarH*.5 - 6, W, 6);
+
+  ctx.save();
+  if (shake > .3) ctx.translate(rand(-shake,shake), rand(-shake,shake));
+
+  // belt
+  const bx = L.beltX - L.beltW/2;
+  ctx.fillStyle = '#2c2140'; rr(bx-8, -20, L.beltW+16, L.beltEnd+28, 14); ctx.fill();
+  ctx.fillStyle = '#3b3350'; ctx.fillRect(bx, -20, L.beltW, L.beltEnd+20);
+  ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 3;
+  for (let y = -28 + beltOffset; y < L.beltEnd; y += 28){ ctx.beginPath(); ctx.moveTo(bx+6, y); ctx.lineTo(bx+L.beltW-6, y); ctx.stroke(); }
+  // chute (brak)
+  ctx.fillStyle = '#2c2140'; rr(L.beltX - L.beltW*.45, L.beltEnd + 4, L.beltW*.9, 34, 10); ctx.fill();
+  ctx.fillStyle = '#f6d3e3'; ctx.font = '700 11px Rubik, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('БРАК', L.beltX, L.beltEnd + 21);
+
+  // side arrows hint
+  if (state === 'play' && score < 3){
+    ctx.fillStyle = 'rgba(44,33,64,.35)'; ctx.font = '700 14px Rubik, system-ui, sans-serif';
+    ctx.fillText('◀ тап слева', W*.2, L.beltEnd*.55);
+    ctx.fillText('тап справа ▶', W*.8, L.beltEnd*.55);
+  }
+
+  // jars (behind flying candies)
+  for (const j of jars) drawJar(j, L);
+
+  // front marker
+  const f = state === 'play' ? front() : null;
+  for (const c of candies){
+    if (c.mode === 'fall' && c.y > L.beltEnd + 30) continue;
+    drawCandy(c.x, c.y, c.kind, c.rot, c === f);
+  }
+
+  for (const p of particles){
+    ctx.globalAlpha = Math.max(0, p.life/.8); ctx.fillStyle = p.c;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.font = '700 16px Rubik, system-ui, sans-serif';
+  for (const p of popups){ ctx.globalAlpha = Math.max(0, Math.min(1, p.life)); ctx.fillStyle = p.c; ctx.fillText(p.txt, p.x, p.y); }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  if (banner){
+    const a = Math.min(1, banner.life*2);
+    ctx.globalAlpha = a;
+    ctx.font = '20px "Rubik Mono One", system-ui, sans-serif';
+    const w = Math.min(W - 32, ctx.measureText(banner.txt).width + 40);
+    ctx.fillStyle = '#2c2140'; rr(W/2 - w/2, H*.36 - 28, w, 56, 16); ctx.fill();
+    ctx.fillStyle = '#ffc83d'; ctx.fillText(banner.txt, W/2, H*.36 + 1, w - 24);
+    ctx.globalAlpha = 1;
+  }
+  if (flash > 0){ ctx.fillStyle = `rgba(255,79,134,${flash*.5})`; ctx.fillRect(0,0,W,H); }
+}
+
+function drawJar(j, L){
+  const fl = FLAVORS[j.f];
+  const w = L.jarW, h = L.jarH, x = j.x - w/2, y = L.jarY - h/2;
+  const s = 1 + Math.sin(j.wob*10)*j.wob*.05;
+  ctx.save(); ctx.translate(j.x, L.jarY + h/2); ctx.scale(s, 2 - s); ctx.translate(-j.x, -(L.jarY + h/2));
+  // glass
+  ctx.fillStyle = 'rgba(255,255,255,.55)'; rr(x, y + 14, w, h - 14, 18); ctx.fill();
+  // content
+  const ch = (h - 22) * (.12 + j.fill*.88);
+  ctx.save(); rr(x+4, y + 18, w-8, h - 22, 14); ctx.clip();
+  ctx.fillStyle = fl.c; ctx.fillRect(x, y + h - ch - 4, w, ch + 4);
+  ctx.fillStyle = fl.l;
+  for (let i=0;i<6;i++){ ctx.beginPath(); ctx.arc(x + 12 + i*((w-24)/5), y + h - ch - 2, 6, 0, TAU); ctx.fill(); }
+  ctx.restore();
+  ctx.lineWidth = 3; ctx.strokeStyle = '#2c2140'; rr(x, y + 14, w, h - 14, 18); ctx.stroke();
+  // lid
+  ctx.fillStyle = fl.d; rr(x + 8, y, w - 16, 18, 6); ctx.fill(); ctx.stroke();
+  // label
+  ctx.fillStyle = '#fff7fb'; rr(x + 12, y + h*.42, w - 24, 26, 8); ctx.fill(); ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#2c2140'; ctx.font = '700 13px Rubik, system-ui, sans-serif';
+  ctx.fillText(fl.name, j.x, y + h*.42 + 14, w - 30);
+  // shine
+  ctx.fillStyle = 'rgba(255,255,255,.6)'; rr(x + 9, y + 26, 6, h*.35, 3); ctx.fill();
+  ctx.restore();
+}
+
+function drawCandy(x, y, kind, rot, isFront){
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  let main, dark, light;
+  if (kind === 'burnt'){ main = '#4a3630'; dark = '#2a1d19'; light = '#6b5048'; }
+  else if (kind === 'rainbow'){ main = null; dark = '#2c2140'; light = '#ffffff'; }
+  else { const f = FLAVORS[kind]; main = f.c; dark = f.d; light = f.l; }
+  if (isFront){
+    ctx.strokeStyle = 'rgba(255,247,251,.9)'; ctx.lineWidth = 3; ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.arc(0,0,30,0,TAU); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // wrapper ends
+  ctx.fillStyle = kind === 'rainbow' ? '#ffc83d' : (light);
+  ctx.strokeStyle = '#2c2140'; ctx.lineWidth = 2.5;
+  for (const sgn of [-1,1]){
+    ctx.beginPath(); ctx.moveTo(sgn*14, 0); ctx.lineTo(sgn*30, -12); ctx.lineTo(sgn*27, 0); ctx.lineTo(sgn*30, 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  // body
+  ctx.beginPath(); ctx.ellipse(0, 0, 19, 15, 0, 0, TAU);
+  if (kind === 'rainbow'){
+    const g = ctx.createLinearGradient(-19,0,19,0);
+    g.addColorStop(0,'#ff4f86'); g.addColorStop(.35,'#ffc83d'); g.addColorStop(.65,'#3fd0a8'); g.addColorStop(1,'#5b7cfa');
+    ctx.fillStyle = g;
+  } else ctx.fillStyle = main;
+  ctx.fill(); ctx.stroke();
+  // stripes / burnt cracks
+  ctx.save(); ctx.beginPath(); ctx.ellipse(0,0,17,13,0,0,TAU); ctx.clip();
+  if (kind === 'burnt'){
+    ctx.strokeStyle = '#1a110e'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-8,-6); ctx.lineTo(-2,0); ctx.lineTo(-6,6); ctx.moveTo(4,-8); ctx.lineTo(7,2); ctx.stroke();
+  } else if (kind !== 'rainbow'){
+    ctx.strokeStyle = light; ctx.lineWidth = 4;
+    for (let i=-3;i<=3;i++){ ctx.beginPath(); ctx.moveTo(i*9-10, -16); ctx.lineTo(i*9+10, 16); ctx.stroke(); }
+  }
+  ctx.restore();
+  ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(-6,-6,5,3,-.5,0,TAU); ctx.fill();
+  ctx.restore();
+  if (kind === 'burnt'){
+    ctx.strokeStyle = 'rgba(80,70,80,.35)'; ctx.lineWidth = 3;
+    for (let i=0;i<2;i++){
+      const ph = t*3 + i*2;
+      ctx.beginPath(); ctx.moveTo(x - 4 + i*8, y - 16);
+      ctx.quadraticCurveTo(x + Math.sin(ph)*8 + i*6, y - 26, x - 2 + i*8, y - 36); ctx.stroke();
+    }
+  }
+}
+
+/* ---------- loop & input ---------- */
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(.033, (now - last)/1000); last = now;
+  step(dt); draw();
+  requestAnimationFrame(frame);
+}
+cv.addEventListener('pointerdown', e => { e.preventDefault(); sendTo(e.clientX < W/2 ? 0 : 1); });
+window.addEventListener('keydown', e => {
+  if (e.code === 'ArrowLeft'){ e.preventDefault(); sendTo(0); }
+  else if (e.code === 'ArrowRight'){ e.preventDefault(); sendTo(1); }
+  else if ((e.code === 'Space' || e.code === 'Enter') && state !== 'play' && state !== 'dying'){ e.preventDefault(); start(); }
+});
+$('startBtn').addEventListener('click', start);
+$('againBtn').addEventListener('click', start);
+
+reset();
+$('menuBest').textContent = best ? 'Твой рекорд: ' + best : '';
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
