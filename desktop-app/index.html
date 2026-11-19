@@ -102,6 +102,16 @@ table.nm td{padding:1px 14px 1px 0}
 .slots{display:flex;gap:7px;justify-content:center;margin-bottom:8px;flex-wrap:wrap}
 .slot{width:40px;height:46px;border:1px solid var(--line2);border-radius:7px;background:#05101a;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:700;font-size:20px;color:var(--cyan)}
 .slot.fill{border-color:var(--cyan)}
+.chist{display:flex;flex-direction:column;gap:5px;margin-bottom:8px;max-height:150px;overflow:auto}
+.crow{display:flex;gap:5px;justify-content:center}
+.htile{width:36px;height:36px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:700;font-size:16px;border:1px solid var(--line)}
+.htile.g{background:#1d6b4f;border-color:var(--green);color:#eafff5}
+.htile.y{background:#8a6a1e;border-color:var(--amber);color:#fff5df}
+.htile.n{background:#121d2b;border-color:var(--faint);color:var(--dim)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--dim);margin-bottom:8px;align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:13px;height:13px;border-radius:3px;display:inline-block}
+.tut{border:1px solid var(--line2);border-left:3px solid var(--amber);background:rgba(255,177,59,.07);border-radius:0 8px 8px 0;padding:8px 11px;font-size:12.5px;color:#c7b184;margin-bottom:8px;line-height:1.5}
 .keys{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
 .keys button{min-width:38px;height:38px;border-radius:7px;border:1px solid var(--line);background:#0b1826;color:var(--fg);font-family:var(--disp);font-size:15px}
 .keys button:active{background:var(--cyan);color:#041014}
@@ -512,31 +522,47 @@ function enterSession(h){
 /* --- creds: mastermind --- */
 function breachCreds(h){
   const secret=Array.from({length:h.len},()=>HEX[rnd(0,15)]);
-  const tries=5+S.tools.cpu;
-  puzzle={type:'creds',secret,guess:[],tries,used:0,h};
-  const hint=S.tools.kit>0?revealHint(secret,S.tools.kit):'';
-  ovl.innerHTML='<h4>HYDRA // подбор ключа ('+h.len+' симв., 0-9 A-F)</h4>'+
-    '<div class="hint">После попытки: ◉ символ на месте · ○ есть, но не там. Попыток: '+tries+'. '+hint+'</div>'+
+  const tries=6+S.tools.cpu;
+  puzzle={type:'creds',secret,guess:[],tries,used:0,h,rows:[]};
+  const hint=S.tools.kit>0?'<div class="tut">◂ Эксплойт-кит перехватил: '+revealHint(secret,S.tools.kit)+'</div>':'';
+  const tut=S.tutCreds?'':'<div class="tut">Это как «Угадай код» (Wordle для ключа). Собери '+h.len+' символа кнопками и жми «Подобрать». После каждой попытки плитки красятся:<br>🟩 зелёная — символ на своём месте · 🟨 жёлтая — есть в ключе, но в другом месте · ⬛ серая — такого символа в ключе нет.<br>Смотри на цвета и подбирай за несколько попыток.</div>';
+  S.tutCreds=true;save();
+  ovl.innerHTML='<h4>HYDRA // подбор ключа ('+h.len+' симв., 0-9 A-F)</h4>'+tut+hint+
+    '<div class="legend"><span><i style="background:#1d6b4f;border:1px solid var(--green)"></i>на месте</span><span><i style="background:#8a6a1e;border:1px solid var(--amber)"></i>есть, не там</span><span><i style="background:#121d2b;border:1px solid var(--faint)"></i>нет в ключе</span><span style="margin-left:auto">попыток: <b id="triesLeft" style="color:var(--cyan)">'+tries+'</b></span></div>'+
+    '<div class="chist" id="chist"></div>'+
     '<div class="slots" id="sl"></div><div class="keys" id="kp"></div>'+
-    '<div class="act"><button id="pdel">⌫</button><button class="go" id="pgo">⚡ Подобрать</button><button class="cancel" id="px">отмена</button></div>';
+    '<div class="act"><button id="pdel">⌫ стереть</button><button class="go" id="pgo">⚡ Подобрать</button><button class="cancel" id="px">отмена</button></div>';
   showOvl();
   const kp=$('kp');HEX.split('').forEach(x=>{const b=document.createElement('button');b.textContent=x;b.onclick=()=>{if(puzzle.guess.length<h.len){puzzle.guess.push(x);sfx.key();credSlots();}};kp.appendChild(b);});
   $('pdel').onclick=()=>{puzzle.guess.pop();credSlots();};
   $('pgo').onclick=credGo;$('px').onclick=()=>{closePuzzle();out('Проникновение прервано.','sys');prompt_();};
   credSlots();
 }
-function revealHint(secret,lvl){const idx=[...secret.keys()].sort(()=>Math.random()-.5).slice(0,lvl);return 'Кит перехватил: '+idx.map(i=>'поз.'+(i+1)+'='+secret[i]).join(', ')+'.';}
+function revealHint(secret,lvl){const idx=[...secret.keys()].sort(()=>Math.random()-.5).slice(0,lvl);return idx.map(i=>(i+1)+'-й символ = '+secret[i]).join(', ')+'.';}
 function credSlots(){const s=$('sl');if(!s)return;s.innerHTML='';for(let i=0;i<puzzle.h.len;i++){const d=document.createElement('div');d.className='slot'+(puzzle.guess[i]?' fill':'');d.textContent=puzzle.guess[i]||'';s.appendChild(d);}}
+function wordleColors(g,sec){
+  // two-pass per-tile coloring (handles duplicates like Wordle)
+  const res=new Array(g.length).fill('n');const left={};
+  for(let i=0;i<g.length;i++){if(g[i]===sec[i])res[i]='g';else left[sec[i]]=(left[sec[i]]||0)+1;}
+  for(let i=0;i<g.length;i++){if(res[i]==='g')continue;if(left[g[i]]>0){res[i]='y';left[g[i]]--;}}
+  return res;
+}
+function pushHistRow(g,colors){
+  const wrap=$('chist');if(!wrap)return;
+  const row=document.createElement('div');row.className='crow';
+  g.forEach((ch,i)=>{const t=document.createElement('div');t.className='htile '+colors[i];t.textContent=ch;row.appendChild(t);});
+  wrap.appendChild(row);wrap.scrollTop=wrap.scrollHeight;
+}
 function credGo(){
-  if(puzzle.guess.length<puzzle.h.len){out('Ключ неполный.','err');return;}
+  if(puzzle.guess.length<puzzle.h.len){out('Ключ неполный — добери символы.','warn');return;}
   const g=puzzle.guess.slice(),sec=puzzle.secret.slice();puzzle.used++;
-  let ex=0;const sl=[],gl=[];for(let i=0;i<g.length;i++){if(g[i]===sec[i])ex++;else{sl.push(sec[i]);gl.push(g[i]);}}
-  let pa=0;gl.forEach(x=>{const k=sl.indexOf(x);if(k>-1){pa++;sl.splice(k,1);}});
-  rawln('<span class="me"></span>try '+g.join('')+' <span class="cy">[ '+'◉'.repeat(ex)+'○'.repeat(pa)+'·'.repeat(puzzle.h.len-ex-pa)+' ]</span>');
-  if(ex===puzzle.h.len){const h=puzzle.h;closePuzzle();sfx.ok();enterSession(h);return;}
+  const colors=wordleColors(g,sec);
+  pushHistRow(g,colors);
+  const ex=colors.filter(c=>c==='g').length;
+  if(ex===puzzle.h.len){const h=puzzle.h;closePuzzle();sfx.ok();out('✓ Ключ подобран: '+g.join(''),'ok');enterSession(h);return;}
   sfx.bad();bump(2.5);puzzle.guess=[];credSlots();
-  if(puzzle.used>=puzzle.tries){closePuzzle();bump(12);out('✗ Учётки не подобраны, попытки кончились. Трейс подскочил. exploit — заново.','rd');prompt_();}
-  else out('Осталось попыток: '+(puzzle.tries-puzzle.used),'warn');
+  const left=puzzle.tries-puzzle.used;const tl=$('triesLeft');if(tl)tl.textContent=left;
+  if(puzzle.used>=puzzle.tries){closePuzzle();bump(12);out('✗ Ключ не подобран, попытки кончились. Трейс подскочил. Набери exploit — попробовать заново.','rd');prompt_();}
 }
 
 /* --- sqli: multi-step choice --- */
