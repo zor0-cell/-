@@ -1,0 +1,31 @@
+{
+  "name": "netrunner-2088",
+  "productName": "NETRUNNER 2088",
+  "version": "1.0.0",
+  "description": "Выдуманный киберпанк-симулятор хакера — десктопное приложение",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
+  },
+  "author": "NETRUNNER",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "net.netrunner.game",
+    "productName": "NETRUNNER 2088",
+    "files": [
+      "main.js",
+      "index.html"
+    ],
+    "win": { "target": "nsis" },
+    "mac": { "target": "dmg" },
+    "linux": { "target": "AppImage" }
+  }
+}

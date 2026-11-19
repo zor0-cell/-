@@ -137,7 +137,15 @@ table.nm td{padding:1px 14px 1px 0}
 .bar-mini{height:6px;background:#05101a;border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-top:6px}
 .bar-mini i{display:block;height:100%;background:var(--cyan)}
 
-@media (max-width:859px){ #os .work{display:none} }
+/* narrow / artifact pane: stack panes and allow scroll instead of hiding */
+@media (max-width:859px){
+  html,body{overflow:auto}
+  #os{height:auto;min-height:100%}
+  .work{grid-template-columns:1fr;min-height:0}
+  #map{height:220px}
+  .pane .term{min-height:320px}
+  .win{width:min(560px,94vw)}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -798,7 +806,7 @@ async function bootSeq(){
 }
 
 /* ---------- gate ---------- */
-function isDesktop(){try{return matchMedia('(min-width:860px) and (pointer:fine)').matches;}catch(e){return innerWidth>=860;}}
+function isDesktop(){try{return matchMedia('(pointer:fine)').matches || innerWidth>=900;}catch(e){return innerWidth>=900;}}
 function launch(){ $('gate').hidden=true; load(); if(S.seen){ $('intro').hidden=true; bootSeq(); } else { $('intro').hidden=false; } }
 $('enter').onclick=()=>{$('intro').hidden=true;S.seen=true;save();bootSeq();};
 $('forceEnter').onclick=launch;

@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04070c">
+<title>NETRUNNER 2088</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@500;700;900&display=swap">
+<style>
+/* Layout: desktop cyberdeck OS — top status bar, 2-pane workspace (live netmap + terminal), bottom taskbar; overlays for shop/files/intrusion */
+:root{
+  --bg:#04070c; --bg2:#070d15; --panel:#091320; --panel2:#0c1826;
+  --line:#15304a; --line2:#1d4668;
+  --fg:#bdecdf; --dim:#577682; --faint:#2f5361;
+  --cyan:#2de5d2; --mag:#ff3d8a; --amber:#ffb13b; --red:#ff4d5e; --green:#4dffa6; --blue:#4d9bff;
+  --mono:"Share Tech Mono", ui-monospace, Menlo, monospace;
+  --disp:"Orbitron", var(--mono);
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--fg);font-family:var(--mono);font-size:14px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+#scan{pointer-events:none;position:fixed;inset:0;z-index:50;opacity:.5;mix-blend-mode:overlay;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.35) 2px 3px)}
+button{font-family:var(--mono);cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+/* ===== gate (laptop required) ===== */
+#gate{position:fixed;inset:0;z-index:60;background:radial-gradient(circle at 50% 30%,#0a1626,#04070c 70%);display:flex;align-items:center;justify-content:center;padding:24px}
+#gate .g{max-width:440px;text-align:center;display:flex;flex-direction:column;gap:16px}
+#gate h1{font-family:var(--disp);font-weight:900;font-size:30px;letter-spacing:.08em;color:var(--cyan);text-shadow:0 0 20px rgba(45,229,210,.5);margin:0}
+#gate h1 b{color:var(--mag)}
+#gate p{color:#9ec4bb;line-height:1.6;margin:0}
+#gate .mono{font-family:var(--disp);color:var(--amber);font-size:13px;letter-spacing:.1em}
+#gate a{color:var(--dim);font-size:12px;text-decoration:underline;cursor:pointer}
+
+/* ===== boot ===== */
+#boot{position:fixed;inset:0;z-index:55;background:#04070c;padding:28px;overflow:hidden;font-size:13px;color:var(--green)}
+#boot .bl{white-space:pre-wrap}
+
+/* ===== intro ===== */
+#intro{position:fixed;inset:0;z-index:40;background:rgba(3,6,11,.9);display:flex;align-items:center;justify-content:center;padding:24px}
+#intro .card{background:var(--panel);border:1px solid var(--cyan);box-shadow:0 0 50px rgba(45,229,210,.15);border-radius:12px;padding:26px;max-width:520px;display:flex;flex-direction:column;gap:14px;max-height:92%;overflow:auto}
+#intro h1{font-family:var(--disp);font-weight:900;font-size:34px;letter-spacing:.06em;color:var(--cyan);text-shadow:0 0 18px rgba(45,229,210,.5);margin:0;line-height:1}
+#intro h1 b{color:var(--mag)}
+#intro p{margin:0;color:#a7c6bd;line-height:1.6;font-size:14px}
+#intro .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#intro .f{border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--dim)}
+#intro .f b{color:var(--cyan);font-family:var(--disp);font-size:11px;letter-spacing:.08em;display:block;margin-bottom:4px}
+#intro .note{border-left:3px solid var(--amber);background:rgba(255,177,59,.06);padding:8px 12px;font-size:12.5px;color:#b79a6a;border-radius:0 8px 8px 0}
+.gobtn{font-family:var(--disp);font-weight:700;font-size:16px;letter-spacing:.05em;padding:14px;border-radius:10px;border:1px solid var(--cyan);background:var(--cyan);color:#041014}
+
+/* ===== OS shell ===== */
+#os{display:none;flex-direction:column;height:100%}
+.topbar{flex:none;display:flex;align-items:center;gap:18px;background:linear-gradient(180deg,#0a1521,#060d16);border-bottom:1px solid var(--line);padding:7px 16px}
+.topbar .logo{font-family:var(--disp);font-weight:900;font-size:14px;letter-spacing:.14em;color:var(--cyan)}
+.topbar .logo b{color:var(--mag)}
+.topbar .stat{display:flex;gap:7px;align-items:baseline;font-size:13px}
+.topbar .stat .k{color:var(--dim);font-size:11px;letter-spacing:.06em}
+.topbar .stat .v{color:var(--fg);font-variant-numeric:tabular-nums}
+.cred .v{color:var(--amber)} .bot .v{color:var(--green)}
+.topbar .spacer{flex:1}
+.trace-rail{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim)}
+.trace{width:160px;height:8px;background:#05101a;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.trace i{display:block;height:100%;width:0;background:var(--green);transition:width .25s linear,background .3s}
+.clock{font-variant-numeric:tabular-nums;color:var(--dim);font-size:12px}
+
+.work{flex:1;display:grid;grid-template-columns:minmax(300px,1fr) minmax(420px,1.25fr);gap:10px;padding:10px;min-height:0}
+.pane{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.pane .ph{flex:none;display:flex;align-items:center;justify-content:space-between;background:var(--panel2);border-bottom:1px solid var(--line);padding:6px 12px;font-family:var(--disp);font-size:11px;letter-spacing:.1em;color:var(--dim)}
+.pane .ph .dots{display:flex;gap:5px}.dot{width:9px;height:9px;border-radius:50%}.dot.r{background:#ff5f57}.dot.y{background:#febc2e}.dot.g{background:#28c840}
+
+/* netmap */
+#map{flex:1;min-height:0;position:relative}
+#mapc{width:100%;height:100%;display:block}
+.maplegend{position:absolute;left:8px;bottom:8px;font-size:10px;color:var(--dim);line-height:1.5;background:rgba(6,12,20,.6);padding:5px 8px;border-radius:6px;border:1px solid var(--line)}
+.maplegend b{color:var(--fg)}
+
+/* terminal */
+.term{flex:1;overflow-y:auto;padding:10px 12px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.ln{white-space:pre-wrap;overflow-wrap:anywhere;margin:1px 0}
+.sys{color:var(--dim)} .ok{color:var(--green)} .err{color:var(--red)} .warn{color:var(--amber)}
+.cy{color:var(--cyan)} .mg{color:var(--mag)} .am{color:var(--amber)} .bl{color:var(--blue)} .gr{color:var(--green)}
+.me::before{content:var(--prompt,"root@deck:~# ");color:var(--mag)}
+.me{color:var(--fg)}
+.box{border:1px solid var(--line);border-left:3px solid var(--cyan);background:var(--bg2);border-radius:0 7px 7px 0;padding:7px 11px;margin:5px 0;white-space:pre-wrap}
+.box.mg{border-left-color:var(--mag)} .box.am{border-left-color:var(--amber)} .box.rd{border-left-color:var(--red)} .box.gr{border-left-color:var(--green)}
+a.lnk{color:var(--cyan);text-decoration:underline;cursor:pointer}
+table.nm{border-collapse:collapse;margin:3px 0;font-size:13px}
+table.nm td{padding:1px 14px 1px 0}
+.cli{flex:none;display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);background:#05101a;padding:8px 12px}
+.cli .ps{color:var(--mag);font-size:13px;flex:none;white-space:nowrap}
+.cli input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--fg);font-family:var(--mono);font-size:14px;caret-color:var(--cyan)}
+
+/* intrusion overlay */
+.ovl{flex:none;border-top:1px solid var(--line2);background:#06101b;padding:10px 12px}
+.ovl h4{margin:0 0 6px;font-family:var(--disp);font-size:12px;letter-spacing:.08em;color:var(--mag)}
+.ovl .hint{font-size:12px;color:var(--dim);margin-bottom:8px}
+.slots{display:flex;gap:7px;justify-content:center;margin-bottom:8px;flex-wrap:wrap}
+.slot{width:40px;height:46px;border:1px solid var(--line2);border-radius:7px;background:#05101a;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:700;font-size:20px;color:var(--cyan)}
+.slot.fill{border-color:var(--cyan)}
+.keys{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.keys button{min-width:38px;height:38px;border-radius:7px;border:1px solid var(--line);background:#0b1826;color:var(--fg);font-family:var(--disp);font-size:15px}
+.keys button:active{background:var(--cyan);color:#041014}
+.choice{display:flex;flex-direction:column;gap:6px}
+.choice button{text-align:left;border:1px solid var(--line);background:#0b1826;color:var(--fg);border-radius:7px;padding:9px 11px;font-size:13px}
+.choice button:hover{border-color:var(--line2)}
+.rop{display:flex;flex-wrap:wrap;gap:6px}
+.rop button{border:1px solid var(--line);background:#0b1826;color:var(--cy);border-radius:7px;padding:7px 10px;font-size:12px;color:var(--cyan)}
+.ovl .act{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.ovl .act button{flex:1;min-width:110px;height:40px;border-radius:8px;border:1px solid var(--line);background:#0b1826;color:var(--fg);font-family:var(--disp);font-size:13px}
+.ovl .act .go{background:var(--cyan);color:#041014;border-color:var(--cyan);font-weight:700}
+.ovl .act .cancel{color:var(--amber)}
+
+/* taskbar */
+.taskbar{flex:none;display:flex;align-items:center;gap:6px;background:linear-gradient(180deg,#0a1521,#050b12);border-top:1px solid var(--line);padding:6px 12px}
+.tbtn{border:1px solid var(--line);background:#0b1826;color:var(--cyan);border-radius:7px;padding:6px 12px;font-size:12px;display:flex;gap:7px;align-items:center}
+.tbtn:hover{border-color:var(--line2)}
+.tbtn .i{font-size:14px}
+.taskbar .spacer{flex:1}
+
+/* window overlays */
+.win{position:fixed;z-index:30;top:70px;left:50%;transform:translateX(-50%);width:min(560px,92vw);max-height:78vh;background:var(--panel);border:1px solid var(--line2);border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden}
+.win .wh{flex:none;display:flex;align-items:center;justify-content:space-between;background:var(--panel2);border-bottom:1px solid var(--line);padding:9px 14px;cursor:move;font-family:var(--disp);font-size:12px;letter-spacing:.08em;color:var(--fg)}
+.win .wh b{color:var(--cyan)}
+.win .x{border:0;background:none;color:var(--dim);font-size:18px;line-height:1;padding:0 4px}
+.win .wb{overflow:auto;padding:14px}
+.item{border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:10px}
+.item .t{font-family:var(--disp);font-size:13px;color:var(--fg);display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.item .t .p{color:var(--amber);font-size:12px}
+.item .d{color:var(--dim);font-size:12.5px;margin:5px 0 8px;line-height:1.5}
+.item .buy{border:1px solid var(--cyan);background:rgba(45,229,210,.1);color:var(--cyan);border-radius:7px;padding:7px 14px;font-size:12px}
+.item .buy:disabled{opacity:.4;border-color:var(--line);color:var(--dim);background:none}
+.bar-mini{height:6px;background:#05101a;border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-top:6px}
+.bar-mini i{display:block;height:100%;background:var(--cyan)}
+
+/* narrow / artifact pane: stack panes and allow scroll instead of hiding */
+@media (max-width:859px){
+  html,body{overflow:auto}
+  #os{height:auto;min-height:100%}
+  .work{grid-template-columns:1fr;min-height:0}
+  #map{height:220px}
+  .pane .term{min-height:320px}
+  .win{width:min(560px,94vw)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div id="scan"></div>
+
+<div id="gate">
+  <div class="g">
+    <h1>NET<b>RUNNER</b> 2088</h1>
+    <p class="mono">// СИСТЕМНОЕ ТРЕБОВАНИЕ</p>
+    <p>Кибердек разворачивается только на полноценной рабочей станции. Нужны физическая клавиатура и мышь: взлом идёт через командную строку, карту сети и горячие клавиши.</p>
+    <p class="mono" style="color:var(--mag)">Открой эту страницу на ноутбуке или компьютере.</p>
+    <a id="forceEnter">я на компьютере, запустить всё равно →</a>
+  </div>
+</div>
+
+<div id="boot" hidden></div>
+
+<div id="intro" hidden>
+  <div class="card">
+    <h1>NET<b>RUNNER</b><br>2088</h1>
+    <p>Дождь, неон и корпорации, которым принадлежит Найт-Сити. Ты — <b>нетраннер</b>, наёмный взломщик. Твой кибердек — это терминал, живая карта сети и арсенал эксплойтов. Берёшь контракт, проходишь всю цепочку настоящего вторжения и исчезаешь, пока трейсер не вычислил твой сигнал.</p>
+    <div class="cols">
+      <div class="f"><b>РАЗВЕДКА</b>scan вскрывает порты, сервисы и уязвимость цели</div>
+      <div class="f"><b>ПРОНИКНОВЕНИЕ</b>exploit — своя мини-игра под каждый тип дыры</div>
+      <div class="f"><b>ЗАКРЕПЛЕНИЕ</b>privesc до root, persist ставит бэкдор с пассивным доходом</div>
+      <div class="f"><b>СЛЕДЫ</b>живой трейс растёт в сессии; clean и прокси его сбивают</div>
+    </div>
+    <p class="note">Это выдуманный мир: ни одной реальной системы, карты или сервиса здесь нет, и ни одной настоящей команды атаки игра не выполняет. Взлом реальных систем и кража денег — преступление. Здесь — только головоломки и сюжет.</p>
+    <p class="sys" style="color:var(--dim);font-size:12px">Печатай команды в терминале. <b style="color:var(--cyan)">help</b> — список, <b style="color:var(--cyan)">↑/↓</b> — история, <b style="color:var(--cyan)">Tab</b> — автодополнение. Прогресс сохраняется на этом устройстве.</p>
+    <button class="gobtn" id="enter">▸ Загрузить кибердек</button>
+  </div>
+</div>
+
+<div id="os">
+  <div class="topbar">
+    <span class="logo">NET<b>RUNNER</b></span>
+    <span class="stat cred"><span class="k">¤</span><span class="v" id="cred">0</span></span>
+    <span class="stat"><span class="k">CPU</span><span class="v" id="cpu">1</span></span>
+    <span class="stat"><span class="k">РЕП</span><span class="v" id="rep">0</span></span>
+    <span class="stat bot"><span class="k">БОТНЕТ</span><span class="v" id="botnet">0</span></span>
+    <span class="spacer"></span>
+    <span class="trace-rail"><span>TRACE</span><span class="trace"><i id="traceBar"></i></span><span id="tracePct">0%</span></span>
+    <span class="clock" id="clock">00:00</span>
+  </div>
+
+  <div class="work">
+    <div class="pane">
+      <div class="ph"><span>NETMAP // окрестности сети</span><span class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></span></div>
+      <div id="map"><canvas id="mapc"></canvas>
+        <div class="maplegend"><b>●</b> цель &nbsp; <b style="color:var(--amber)">◉</b> вскрыта &nbsp; <b style="color:var(--green)">◈</b> бэкдор<br>Клик по узлу — навести цель</div>
+      </div>
+    </div>
+    <div class="pane">
+      <div class="ph"><span id="termTitle">TERMINAL // deck@localhost</span><span class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></span></div>
+      <div class="term" id="term" aria-live="polite"></div>
+      <div class="ovl" id="ovl" hidden></div>
+      <form class="cli" id="cli"><span class="ps" id="ps">root@deck:~#</span><input id="in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Терминал"></form>
+    </div>
+  </div>
+
+  <div class="taskbar">
+    <button class="tbtn" data-cmd="jobs"><span class="i">⌁</span>Контракты</button>
+    <button class="tbtn" data-cmd="shop"><span class="i">⚙</span>Магазин</button>
+    <button class="tbtn" data-cmd="files"><span class="i">▤</span>Архив</button>
+    <button class="tbtn" data-cmd="botnet"><span class="i">◈</span>Ботнет</button>
+    <button class="tbtn" data-cmd="help"><span class="i">?</span>Справка</button>
+    <span class="spacer"></span>
+    <button class="tbtn" id="muteBtn"><span class="i">♪</span>Звук</button>
+  </div>
+</div>
+
+<script>
+(() => {
+const $=id=>document.getElementById(id);
+const term=$('term'), ovl=$('ovl');
+const HEX='0123456789ABCDEF';
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const reduced=()=>{try{return matchMedia('(prefers-reduced-motion:reduce)').matches;}catch(e){return false;}};
+const sleep=ms=>new Promise(r=>setTimeout(r,reduced()?0:ms));
+
+/* ---------- audio ---------- */
+let ac=null;
+function snd(f,d,type='square',vol=.04,f2){ if(S.mute)return; try{if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();
+  const t=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(ac.destination);o.start(t);o.stop(t+d+.02);}catch(e){} }
+const sfx={key(){snd(440,.025);},type(){snd(1300,.008,'square',.012);},ok(){snd(660,.09);setTimeout(()=>snd(990,.12),80);},
+  bad(){snd(150,.2,'sawtooth',.05);},coin(){snd(880,.05,'triangle',.04);setTimeout(()=>snd(1320,.08,'triangle',.03),55);},
+  grab(){snd(523,.07);setTimeout(()=>snd(784,.09),60);setTimeout(()=>snd(1047,.13),130);},
+  alarm(){snd(330,.14,'sawtooth',.05);setTimeout(()=>snd(247,.2,'sawtooth',.05),150);},
+  root(){[262,330,392,523].forEach((f,i)=>setTimeout(()=>snd(f,.14,'triangle',.05),i*90));}};
+
+/* ---------- world data ---------- */
+const TOOLS={
+  cpu:   {name:'Разгон кибердека (CPU)',desc:'+1 класс доступа. Открывает цели сложнее и даёт +1 попытку в каждой мини-игре взлома.',base:500,scale:2.2,max:6},
+  proxy: {name:'Прокси-цепочка',desc:'Трейс в активной сессии растёт медленнее на каждый уровень.',base:350,scale:2.0,max:5},
+  kit:   {name:'Эксплойт-кит',desc:'Разведка (scan) помечает тип уязвимости и даёт подсказку в мини-игре. Уровни усиливают подсказку.',base:600,scale:2.4,max:3},
+  root:  {name:'Руткит',desc:'Открывает команду persist: бэкдор на вскрытой цели приносит пассивный доход. Уровень = больше дохода и больше бэкдоров.',base:800,scale:2.3,max:5}
+};
+const toolCost=id=>Math.round(TOOLS[id].base*Math.pow(TOOLS[id].scale,S.tools[id]));
+
+// vuln types: creds, sqli, knock, rce
+const STORY=[
+ {ip:'10.0.0.9',name:'TRAINING-RANGE',org:'Академия нетраннеров',os:'DeckOS 8.1',diff:1,reqCpu:1,vuln:'creds',len:3,root:false,
+  ports:[[22,'ssh','DeckSSH 1.2','слабые учётки'],[80,'http','nginx 1.8','—']],
+  loot:[['users.db','Учебная база',150,false]],reward:[150,250],rep:1,
+  brief:'Легальный полигон. Вскрой SSH подбором ключа и забери учебную базу — так получишь репутацию на бирже.'},
+ {ip:'45.13.88.2',name:'NEON-NOODLE',org:'Сеть «Neon Noodle»',os:'Linux 4.9',diff:1,reqCpu:1,vuln:'sqli',root:false,
+  ports:[[80,'http','Apache 2.4 / PHP','SQL-инъекция в login'],[3306,'mysql','MariaDB','—']],
+  loot:[['loyalty.db','Бонусные карты',320,false]],reward:[280,420],rep:1,
+  brief:'У франшизы дырявая форма входа. Пройди авторизацию инъекцией и слей базу лояльности.'},
+ {ip:'77.201.4.56',name:'CITYLIGHT-ISP',org:'Провайдер CityLight',os:'BSD 12',diff:2,reqCpu:2,vuln:'knock',root:false,
+  ports:[[22,'ssh','filtered','порт-кнок'],[161,'snmp','—','утечка последовательности']],
+  loot:[['routes.cfg','Карта района',480,false],['subs.db','Абоненты',560,false]],reward:[700,1100],rep:2,
+  brief:'SSH закрыт фильтром и ждёт секретную последовательность портов. SNMP её подсказывает. Простучи и войди.'},
+ {ip:'88.44.112.7',name:'MEDI-VAULT',org:'Клиника MediVault',os:'Linux 5.4',diff:2,reqCpu:2,vuln:'creds',len:4,root:true,
+  ports:[[22,'ssh','OpenSSH 7.2','слабые учётки'],[443,'https','nginx','—']],
+  loot:[['billing.db','Счета',540,false],['patients.db','Карты пациентов',1200,true]],reward:[900,1400],rep:3,
+  brief:'Войдёшь как user, но карты пациентов лежат под root. После входа подними права (privesc), потом exfil.'},
+ {ip:'203.0.66.1',name:'ORBIT-PAY',org:'Платёжка OrbitPay',os:'Linux 5.10',diff:3,reqCpu:3,vuln:'sqli',root:false,
+  ports:[[443,'https','nginx / API','двойная SQL-инъекция'],[6379,'redis','—','—']],
+  loot:[['tx.log','Журнал транзакций',1200,false],['vault.bin','Токены',2600,false]],reward:[2200,3200],rep:5,
+  brief:'Платёжный шлюз. Сначала обойди вход инъекцией, затем UNION-запросом вытащи хранилище. Трейс здесь злой.'},
+ {ip:'198.51.100.9',name:'ZENITH-CORP',org:'Корпорация Zenith',os:'Linux 5.15',diff:4,reqCpu:4,vuln:'rce',root:true,
+  ports:[[8080,'http','ZenApp','переполнение буфера (RCE)'],[22,'ssh','OpenSSH 8','—']],
+  loot:[['execmail.pst','Почта правления',1800,false],['prototype.cad','Чертежи',4200,true]],reward:[3600,5200],rep:7,
+  brief:'Промышленная корпа. Собери ROP-цепочку, получи шелл, подними права и уведи чертежи прототипа.'},
+ {ip:'192.88.99.1',name:'CITY-HALL',org:'Мэрия Найт-Сити',os:'Hardened Linux',diff:5,reqCpu:5,vuln:'rce',root:true,
+  ports:[[8443,'https','GovPortal','RCE в загрузчике'],[22,'ssh','filtered','—']],
+  loot:[['cams.ctl','Городские камеры',5000,false],['blackbudget.db','Чёрный бюджет',6500,true]],reward:[6000,8500],rep:10,
+  brief:'Высшая лига. Длинная ROP-цепочка, жёсткий трейс, обязательный privesc. Готовь прокси и заряд clean.'},
+ {ip:'7.7.7.7',name:'BLACKSITE-ZERO',org:'??? [засекречено]',os:'UNKNOWN',diff:6,reqCpu:6,vuln:'creds',len:6,root:true,
+  ports:[[1,'???','—','многослойный ICE']],
+  loot:[['who_runs_city.enc','Кто владеет городом',14000,true]],reward:[12000,16000],rep:20,
+  brief:'Адреса нет ни в одной карте. Финал. Шесть символов ICE и root-замок. После него ты — легенда сети.'}
+];
+
+/* ---------- state ---------- */
+const FRESH=()=>({cred:0,rep:0,trace:0,mute:false,story:0,done:{},loot:[],tools:{cpu:1,proxy:0,kit:0,root:0},backdoors:[],seen:false,hist:[]});
+let S=FRESH();
+const save=()=>{try{localStorage.setItem('netrunner2088v2',JSON.stringify(S));}catch(e){}};
+const load=()=>{try{const r=JSON.parse(localStorage.getItem('netrunner2088v2'));if(r&&r.tools)S=Object.assign(FRESH(),r);}catch(e){}};
+
+let target=null;      // host currently aimed (from scan/netmap)
+let session=null;     // {host, root:bool, stage:'shell'} active intrusion
+let puzzle=null;      // active intrusion mini-game
+let procTargets=[];   // procedural freelance nodes on the map
+let traceTimer=null, incomeTimer=null;
+
+/* ---------- output ---------- */
+function out(t,c){const d=document.createElement('div');d.className='ln'+(c?' '+c:'');d.textContent=t;term.appendChild(d);term.scrollTop=term.scrollHeight;return d;}
+function rawln(h,c){const d=document.createElement('div');d.className='ln'+(c?' '+c:'');d.innerHTML=h;term.appendChild(d);term.scrollTop=term.scrollHeight;return d;}
+function box(l,c){const d=document.createElement('div');d.className='box'+(c?' '+c:'');d.textContent=Array.isArray(l)?l.join('\n'):l;term.appendChild(d);term.scrollTop=term.scrollHeight;return d;}
+async function type(t,c,sp=10){const d=out('',c);if(reduced()){d.textContent=t;return d;}for(let i=0;i<t.length;i++){d.textContent+=t[i];if(i%2===0)sfx.type();term.scrollTop=term.scrollHeight;await sleep(sp);}return d;}
+function clk(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+
+function hud(){
+  $('cred').textContent=S.cred.toLocaleString('ru-RU');
+  $('cpu').textContent=S.tools.cpu;$('rep').textContent=S.rep;
+  $('botnet').textContent=S.backdoors.length;
+  const t=Math.min(100,Math.round(S.trace));
+  $('traceBar').style.width=t+'%';$('tracePct').textContent=t+'%';
+  $('traceBar').style.background=t<50?'var(--green)':t<80?'var(--amber)':'var(--red)';
+  const ps=session?(session.root?'root@':'user@')+session.host.name.toLowerCase()+':~'+(session.root?'#':'$'):'root@deck:~#';
+  $('ps').textContent=ps;
+  document.documentElement.style.setProperty('--prompt','"'+ps+' "');
+  $('termTitle').textContent=session?'TERMINAL // breach '+session.host.ip:'TERMINAL // deck@localhost';
+}
+
+/* ---------- trace ---------- */
+function traceTick(){
+  if(session){ const rate=(0.6+session.host.diff*0.5)*(1-S.tools.proxy*0.15); S.trace=Math.min(100,S.trace+Math.max(.15,rate)); if(S.trace>=100){busted();} }
+  else if(S.trace>0){ S.trace=Math.max(0,S.trace-1.2); }
+  hud();
+}
+function bump(x){ S.trace=Math.min(100,S.trace+x*Math.max(.3,1-S.tools.proxy*0.15)); hud(); if(S.trace>=100)busted(); }
+function busted(){
+  sfx.alarm(); S.trace=0;
+  const loss=Math.min(S.cred,Math.round(300+S.rep*40));S.cred-=loss;
+  closePuzzle();
+  const h=session?session.host.name:'цель';
+  session=null;
+  box(['⚠ ТРЕЙС ЗАВЕРШЁН. ICE узла '+h+' засёк твой сигнал и сбросил соединение.','Пришлось жечь прокси и уходить. − '+loss+' ¤. Трейс обнулён.'],'rd');
+  hud();save();prompt_();
+}
+
+/* ---------- netmap canvas ---------- */
+const mapc=$('mapc'),mctx=mapc.getContext('2d');
+let nodes=[],packets=[],mapRAF=null,mw=0,mh=0;
+function mapResize(){const r=$('map').getBoundingClientRect();const dpr=Math.min(2,devicePixelRatio||1);mw=r.width;mh=r.height;mapc.width=mw*dpr;mapc.height=mh*dpr;mctx.setTransform(dpr,0,0,dpr,0,0);layoutNodes();}
+function visibleHosts(){const arr=[];const s=STORY[S.story];if(s)arr.push(s);for(let i=0;i<S.story;i++)if(S.backdoors.includes(STORY[i].ip))arr.push(STORY[i]);procTargets.forEach(p=>arr.push(p));return arr;}
+function layoutNodes(){
+  const hosts=visibleHosts();
+  nodes=hosts.map((h,i)=>{
+    const old=nodes.find(n=>n.ip===h.ip);
+    const ang=(i/Math.max(1,hosts.length))*Math.PI*2 - Math.PI/2;
+    const rad=Math.min(mw,mh)*0.32;
+    return old?Object.assign(old,{host:h}):{ip:h.ip,host:h,x:mw/2+Math.cos(ang)*rad*(0.6+Math.random()*0.5),y:mh/2+Math.sin(ang)*rad*(0.6+Math.random()*0.5),pulse:Math.random()*6.28};
+  });
+}
+function drawMap(t){
+  mctx.clearRect(0,0,mw,mh);
+  // grid
+  mctx.strokeStyle='rgba(21,48,74,.5)';mctx.lineWidth=1;
+  for(let x=0;x<mw;x+=34){mctx.beginPath();mctx.moveTo(x,0);mctx.lineTo(x,mh);mctx.stroke();}
+  for(let y=0;y<mh;y+=34){mctx.beginPath();mctx.moveTo(0,y);mctx.lineTo(mw,y);mctx.stroke();}
+  // you (center)
+  const cx=mw/2,cy=mh/2;
+  // links
+  nodes.forEach(n=>{const bd=S.backdoors.includes(n.ip);mctx.strokeStyle=bd?'rgba(77,255,166,.4)':'rgba(45,229,210,.18)';mctx.lineWidth=bd?2:1;mctx.beginPath();mctx.moveTo(cx,cy);mctx.lineTo(n.x,n.y);mctx.stroke();});
+  // packets
+  packets=packets.filter(p=>p.t<1);
+  packets.forEach(p=>{p.t+=0.02;const x=p.x0+(p.x1-p.x0)*p.t,y=p.y0+(p.y1-p.y0)*p.t;mctx.fillStyle=p.c;mctx.fillRect(x-1.5,y-1.5,3,3);});
+  // center node
+  mctx.save();mctx.shadowColor='#2de5d2';mctx.shadowBlur=14;mctx.fillStyle='#2de5d2';mctx.beginPath();mctx.arc(cx,cy,7,0,6.28);mctx.fill();mctx.restore();
+  mctx.fillStyle='#577682';mctx.font='10px "Share Tech Mono"';mctx.textAlign='center';mctx.fillText('deck',cx,cy+20);
+  // nodes
+  nodes.forEach(n=>{
+    n.pulse+=0.05;const bd=S.backdoors.includes(n.ip),aimed=target&&target.ip===n.ip,breached=session&&session.host.ip===n.ip;
+    const r=8+Math.sin(n.pulse)*1.5;
+    let col=bd?'#4dffa6':breached?'#ffb13b':aimed?'#ff3d8a':'#2de5d2';
+    if(n.host.reqCpu>S.tools.cpu&&!bd){col='#577682';}
+    mctx.save();mctx.shadowColor=col;mctx.shadowBlur=aimed?18:10;mctx.fillStyle=col;mctx.beginPath();mctx.arc(n.x,n.y,r,0,6.28);mctx.fill();mctx.restore();
+    if(aimed){mctx.strokeStyle=col;mctx.lineWidth=1.5;mctx.beginPath();mctx.arc(n.x,n.y,r+6+Math.sin(t/200)*2,0,6.28);mctx.stroke();}
+    mctx.fillStyle='#bdecdf';mctx.font='10px "Share Tech Mono"';mctx.textAlign='center';
+    mctx.fillText(n.host.name,n.x,n.y-14);
+    mctx.fillStyle='#577682';mctx.fillText(n.ip,n.x,n.y+20);
+  });
+  mapRAF=requestAnimationFrame(drawMap);
+}
+function packetFrom(ip,color){const n=nodes.find(x=>x.ip===ip);if(!n)return;for(let i=0;i<6;i++)setTimeout(()=>packets.push({x0:n.x,y0:n.y,x1:mw/2,y1:mh/2,t:0,c:color||'#4dffa6'}),i*80);}
+mapc.addEventListener('click',e=>{
+  const r=mapc.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;
+  const hit=nodes.find(n=>Math.hypot(n.x-mx,n.y-my)<16);
+  if(hit){ execute('scan '+hit.ip); $('in').focus(); }
+});
+
+/* ---------- command registry ---------- */
+const C={};
+const cmd=(n,f)=>C[n]=f;
+const CMDLIST=['help','clear','scan','exploit','ls','cat','loot','exfil','privesc','persist','clean','disconnect','whoami','jobs','shop','buy','files','botnet','status','mute','reset'];
+
+cmd('help',()=>box(
+ ['ДОСТУПНЫЕ КОМАНДЫ',
+  'jobs                 биржа контрактов + карта сети',
+  'scan <ip>            разведка цели (порты, сервисы, уязвимость)',
+  'exploit              проникнуть в наведённую цель',
+  '— после входа в сессию —',
+  'ls / cat <файл>      осмотреть файловую систему узла',
+  'whoami               текущие права (user / root)',
+  'privesc              поднять права до root',
+  'loot                 список ценных файлов',
+  'exfil <файл>         вытащить файл (кредиты / данные)',
+  'persist              поставить бэкдор (нужен руткит)',
+  'clean                зачистить логи, сбросить трейс',
+  'disconnect           выйти из сессии',
+  '— прочее —',
+  'shop / buy <id>      апгрейды · files · botnet · status',
+  'mute · clear · reset',
+  '',
+  '↑/↓ — история команд, Tab — автодополнение']));
+
+cmd('clear',()=>term.innerHTML='');
+cmd('mute',()=>{S.mute=!S.mute;out('Звук '+(S.mute?'выкл':'вкл'),'sys');save();});
+cmd('status',()=>box(
+ ['ОПЕРАТОР','кредиты : '+S.cred.toLocaleString('ru-RU')+' ¤','репутация: '+S.rep+'  · контрактов: '+S.story,
+  'кибердек : CPU '+S.tools.cpu+' · proxy '+S.tools.proxy+' · kit '+S.tools.kit+' · rootkit '+S.tools.root,
+  'бэкдоров : '+S.backdoors.length+'  (пассивный доход)','трейс    : '+Math.round(S.trace)+'%']));
+cmd('whoami',()=>{ if(!session){out('deck-operator (локальная машина)','sys');return;} out(session.root?'root':'www-data','cy'); });
+
+cmd('jobs',()=>{
+  box('⌁ БИРЖА КОНТРАКТОВ — Найт-Сити','mg');
+  const s=STORY[S.story];
+  if(s){ rawln('<span class="mg">▸ ОСНОВНОЙ КОНТРАКТ</span>'); hostCard(s); }
+  else out('Сюжет пройден. Ты легенда сети. Остался бесконечный фриланс и ботнет.','ok');
+  if(!procTargets.length) procTargets=[genProc()];
+  rawln('<span class="am">▸ ФРИЛАНС (бесконечно)</span>');
+  procTargets.forEach(hostCard);
+  out('Клик по узлу на карте сети слева = scan. Фриланс обновляется после закрытия.','sys');
+});
+function hostCard(h){
+  const lock=h.reqCpu>S.tools.cpu;
+  const d=document.createElement('div');d.className='box'+(lock?' rd':'');
+  const vn={creds:'слабые учётки',sqli:'SQL-инъекция',knock:'порт-кнок',rce:'RCE / переполнение'}[h.vuln];
+  d.textContent=(h.proc?'[FREELANCE] ':'')+h.name+'  '+h.ip+'\n'+h.org+' · '+h.os+'\n'+
+    'класс '+h.diff+' · нужен CPU '+h.reqCpu+(lock?'  ✗ не хватает':'  ✓')+' · дыра: '+vn+'\n'+
+    'награда '+h.reward[0]+'–'+h.reward[1]+' ¤'+(h.proc?'':' · +'+h.rep+' реп')+'\n'+(h.brief||'');
+  term.appendChild(d);
+  if(!lock){const b=document.createElement('div');b.className='ln';const a=document.createElement('a');a.className='lnk';a.textContent='» scan '+h.ip;a.onclick=()=>execute('scan '+h.ip);b.appendChild(a);term.appendChild(b);}
+  term.scrollTop=term.scrollHeight;
+}
+function genProc(){
+  const nm=['DATA-BROKER','GREY-MARKET','CHROME-DEN','RUST-RELAY','VOID-CACHE','PACHINKO-NET','SPRAWL-MEDIA','KOMBU-BANK'];
+  const orgs=['Разовый заказ брокера','Серый рынок данных','Теневой аукцион'];
+  const vulns=['creds','sqli','knock','rce'];
+  const cpu=S.tools.cpu, diff=Math.max(1,Math.min(6,cpu));
+  const vuln=vulns[rnd(0,3)];
+  const base=260*Math.pow(1.85,diff-1);
+  const ip=[rnd(11,220),rnd(0,255),rnd(0,255),rnd(1,254)].join('.');
+  const h={ip,name:nm[rnd(0,nm.length-1)],org:orgs[rnd(0,2)],os:'Linux',diff,reqCpu:Math.max(1,diff),vuln,proc:true,
+    len:Math.max(3,Math.min(6,diff+2)),root:Math.random()<0.4,
+    ports:[[rnd(20,9000),'svc','?',({creds:'слабые учётки',sqli:'SQL-инъекция',knock:'порт-кнок',rce:'RCE'})[vuln]]],
+    loot:[['payload.dat','Пакет данных',Math.round(base),false]],reward:[Math.round(base),Math.round(base*1.6)],rep:0,
+    brief:'Брокер платит за любой вскрытый узел этого класса.'};
+  return h;
+}
+
+cmd('scan',a=>{
+  const ip=(a||'').trim();const h=findHost(ip);
+  if(!h){out(' scan: узел не найден. Открой jobs.','err');return;}
+  if(h.reqCpu>S.tools.cpu){out('scan: ICE класса '+h.diff+'. Твой CPU '+S.tools.cpu+' не пробьёт. Качай дек: shop.','err');return;}
+  target=h;hud();scanAnim(h);
+});
+async function scanAnim(h){
+  bump(2);packetFrom(h.ip,'#2de5d2');
+  await type('nmap -sV -O '+h.ip,'sys',6);
+  await sleep(150);out('Starting scan against '+h.name+' ('+h.org+')','sys');
+  await sleep(120);out('Host is up. OS: '+h.os,'sys');
+  await sleep(120);
+  const t=document.createElement('table');t.className='nm';
+  t.innerHTML='<tr><td class="cy">PORT</td><td class="cy">STATE</td><td class="cy">SERVICE</td><td class="cy">VERSION</td><td class="cy">NOTE</td></tr>';
+  h.ports.forEach(p=>{const tr=document.createElement('tr');const note=p[3];const nc=note&&note!=='—'?'mg':'sys';
+    tr.innerHTML='<td>'+p[0]+'/tcp</td><td class="gr">open</td><td>'+p[1]+'</td><td class="sys">'+p[2]+'</td><td class="'+nc+'">'+note+'</td>';t.appendChild(tr);});
+  term.appendChild(t);term.scrollTop=term.scrollHeight;
+  const vn={creds:'слабые учётные данные (брут ключа/пароля)',sqli:'SQL-инъекция в веб-входе',knock:'скрытый порт-кнок перед SSH',rce:'переполнение буфера → удалённое выполнение'}[h.vuln];
+  const lines=['ЦЕЛЬ НАВЕДЕНА: '+h.name+'  ('+h.ip+')'];
+  if(S.tools.kit>0) lines.push('Эксплойт-кит: вектор атаки — '+vn+'.');
+  else lines.push('Вектор атаки не распознан. Купи эксплойт-кит, чтобы видеть тип дыры.');
+  lines.push('Запускай проникновение: exploit');
+  box(lines,'mg');
+}
+function findHost(ip){
+  if(!ip)return target;
+  const s=STORY[S.story];if(s&&s.ip===ip)return s;
+  const p=procTargets.find(x=>x.ip===ip);if(p)return p;
+  const bd=STORY.find(x=>x.ip===ip&&S.backdoors.includes(ip));if(bd)return bd;
+  if(session&&session.host.ip===ip)return session.host;
+  if(target&&target.ip===ip)return target;
+  return null;
+}
+
+/* ---------- exploit dispatch ---------- */
+cmd('exploit',()=>{
+  if(session){out('exploit: уже есть активная сессия на '+session.host.name+'. disconnect.','warn');return;}
+  if(!target){out('exploit: нет цели. Сначала scan <ip>.','err');return;}
+  const h=target;
+  const map={creds:breachCreds,sqli:breachSqli,knock:breachKnock,rce:breachRce};
+  box(['⚡ ПРОНИКНОВЕНИЕ → '+h.name,'Вектор: '+({creds:'подбор учётных данных',sqli:'SQL-инъекция',knock:'порт-кнок',rce:'ROP-цепочка (RCE)'})[h.vuln]],'mg');
+  bump(3);
+  map[h.vuln](h);
+});
+function showOvl(){ovl.hidden=false;$('in').blur();}
+function closePuzzle(){puzzle=null;ovl.hidden=true;ovl.innerHTML='';}
+function enterSession(h){
+  session={host:h,root:!h.root};  // if host needs root, start as user; else already root
+  packetFrom(h.ip,'#ffb13b');
+  box(['>>> ДОСТУП ПОЛУЧЕН на '+h.name,'Ты '+(session.root?'root':'www-data (ограниченные права)')+'. Файлы: ls · ценное: loot',
+    h.root&&!session.root?'Лучшая добыча под root — подними права: privesc':'','Трейс растёт, пока ты в сессии. Уходи вовремя: clean / disconnect'].filter(Boolean),'gr');
+  hud();prompt_();
+}
+
+/* --- creds: mastermind --- */
+function breachCreds(h){
+  const secret=Array.from({length:h.len},()=>HEX[rnd(0,15)]);
+  const tries=5+S.tools.cpu;
+  puzzle={type:'creds',secret,guess:[],tries,used:0,h};
+  const hint=S.tools.kit>0?revealHint(secret,S.tools.kit):'';
+  ovl.innerHTML='<h4>HYDRA // подбор ключа ('+h.len+' симв., 0-9 A-F)</h4>'+
+    '<div class="hint">После попытки: ◉ символ на месте · ○ есть, но не там. Попыток: '+tries+'. '+hint+'</div>'+
+    '<div class="slots" id="sl"></div><div class="keys" id="kp"></div>'+
+    '<div class="act"><button id="pdel">⌫</button><button class="go" id="pgo">⚡ Подобрать</button><button class="cancel" id="px">отмена</button></div>';
+  showOvl();
+  const kp=$('kp');HEX.split('').forEach(x=>{const b=document.createElement('button');b.textContent=x;b.onclick=()=>{if(puzzle.guess.length<h.len){puzzle.guess.push(x);sfx.key();credSlots();}};kp.appendChild(b);});
+  $('pdel').onclick=()=>{puzzle.guess.pop();credSlots();};
+  $('pgo').onclick=credGo;$('px').onclick=()=>{closePuzzle();out('Проникновение прервано.','sys');prompt_();};
+  credSlots();
+}
+function revealHint(secret,lvl){const idx=[...secret.keys()].sort(()=>Math.random()-.5).slice(0,lvl);return 'Кит перехватил: '+idx.map(i=>'поз.'+(i+1)+'='+secret[i]).join(', ')+'.';}
+function credSlots(){const s=$('sl');if(!s)return;s.innerHTML='';for(let i=0;i<puzzle.h.len;i++){const d=document.createElement('div');d.className='slot'+(puzzle.guess[i]?' fill':'');d.textContent=puzzle.guess[i]||'';s.appendChild(d);}}
+function credGo(){
+  if(puzzle.guess.length<puzzle.h.len){out('Ключ неполный.','err');return;}
+  const g=puzzle.guess.slice(),sec=puzzle.secret.slice();puzzle.used++;
+  let ex=0;const sl=[],gl=[];for(let i=0;i<g.length;i++){if(g[i]===sec[i])ex++;else{sl.push(sec[i]);gl.push(g[i]);}}
+  let pa=0;gl.forEach(x=>{const k=sl.indexOf(x);if(k>-1){pa++;sl.splice(k,1);}});
+  rawln('<span class="me"></span>try '+g.join('')+' <span class="cy">[ '+'◉'.repeat(ex)+'○'.repeat(pa)+'·'.repeat(puzzle.h.len-ex-pa)+' ]</span>');
+  if(ex===puzzle.h.len){const h=puzzle.h;closePuzzle();sfx.ok();enterSession(h);return;}
+  sfx.bad();bump(2.5);puzzle.guess=[];credSlots();
+  if(puzzle.used>=puzzle.tries){closePuzzle();bump(12);out('✗ Учётки не подобраны, попытки кончились. Трейс подскочил. exploit — заново.','rd');prompt_();}
+  else out('Осталось попыток: '+(puzzle.tries-puzzle.used),'warn');
+}
+
+/* --- sqli: multi-step choice --- */
+function breachSqli(h){
+  const twoStep=h.diff>=3;
+  puzzle={type:'sqli',h,step:0,twoStep};
+  sqliStep();
+}
+function sqliStep(){
+  const h=puzzle.h;
+  const stepLogin={
+    q:"SELECT * FROM users WHERE login='[ВВОД]' AND pass='...'",
+    task:'ШАГ '+(puzzle.step+1)+': обойди проверку пароля. Какой ввод в поле логина сделает условие всегда истинным?',
+    opts:[["admin' --",true],["admin",false],["<script>alert(1)<\/script>",false],["' AND 1=2 --",false]],
+    good:'Два дефиса комментируют проверку пароля — вход без него.'};
+  const stepDump={
+    q:"?id=1 UNION SELECT ... FROM [?]",
+    task:'ШАГ 2: ты внутри. Каким запросом вытащить таблицу с токенами?',
+    opts:[["1 UNION SELECT card,token FROM vault --",true],["1; DROP TABLE vault --",false],["1 OR 1=1",false],["SELECT * FROM vault",false]],
+    good:'UNION добавляет к ответу свои колонки из нужной таблицы.'};
+  const st=(puzzle.twoStep&&puzzle.step===1)?stepDump:stepLogin;
+  const opts=st.opts.map((o,i)=>({t:o[0],ok:o[1]})).sort(()=>Math.random()-.5);
+  let hintLine='';
+  if(S.tools.kit>0) hintLine='<div class="hint am">Кит: '+st.good+'</div>';
+  ovl.innerHTML='<h4>SQLMAP // инъекция</h4><div class="hint">Запрос: <span class="cy">'+esc(st.q)+'</span></div>'+
+    '<div class="hint">'+st.task+'</div>'+hintLine+
+    '<div class="choice" id="ch"></div><div class="act"><button class="cancel" id="px">отмена</button></div>';
+  showOvl();
+  const ch=$('ch');
+  opts.forEach(o=>{const b=document.createElement('button');b.textContent=o.t;b.onclick=()=>sqliPick(o.ok,b);ch.appendChild(b);});
+  $('px').onclick=()=>{closePuzzle();out('Инъекция прервана.','sys');prompt_();};
+}
+function sqliPick(ok,b){
+  rawln('<span class="me"></span>payload: <span class="cy">'+esc(b.textContent)+'</span>');
+  if(ok){
+    sfx.ok();
+    if(puzzle.twoStep&&puzzle.step===0){puzzle.step=1;out('✓ Авторизация обойдена. Теперь дамп базы…','ok');bump(2);sqliStep();return;}
+    const h=puzzle.h;closePuzzle();out('✓ База отвечает. Инъекция удалась.','ok');enterSession(h);
+  } else { sfx.bad();bump(4);b.style.borderColor='var(--red)';out('✗ База вернула ошибку, WAF насторожился (+трейс). Пробуй другой payload.','err'); }
+}
+
+/* --- knock: enter port sequence --- */
+function breachKnock(h){
+  // build a fixed-step arithmetic sequence so it's logically solvable
+  const n=3+Math.min(2,h.diff);
+  const step=rnd(1,4)*(Math.random()<.5?-1:1)*rnd(200,700);
+  const start=rnd(2000,8000);
+  const seq=Array.from({length:n},(_,i)=>start+step*i);
+  puzzle={type:'knock',h,seq,guess:[]};
+  const shown = S.tools.kit>0 ? seq.join(' → ') : seq.map((p,i)=>i===0?p:(i===1?p:'????')).join(' → ');
+  box(['SNMP leak // последовательность порт-кнока:', shown,
+    S.tools.kit>0?'(эксплойт-кит восстановил всю цепочку)':'(видно первые два порта — шаг постоянный, дострой остальные сам)'],'am');
+  renderKnock(step);
+}
+function renderKnock(step){
+  const h=puzzle.h;
+  ovl.innerHTML='<h4>KNOCK // простучи порты по порядку</h4>'+
+    '<div class="hint">Шаг между портами: +'+step+'. Нажимай порты в правильном порядке ('+puzzle.seq.length+' шт.).</div>'+
+    '<div class="slots" id="sl"></div><div class="keys" id="kp"></div>'+
+    '<div class="act"><button id="pdel">⌫</button><button class="go" id="pgo">⚡ Отправить стук</button><button class="cancel" id="px">отмена</button></div>';
+  showOvl();
+  // options = correct ports + decoys
+  const opts=puzzle.seq.slice();for(let i=0;i<4;i++)opts.push(rnd(1000,9999));shuffle(opts);
+  const kp=$('kp');opts.forEach(p=>{const b=document.createElement('button');b.textContent=p;b.onclick=()=>{if(puzzle.guess.length<puzzle.seq.length){puzzle.guess.push(p);sfx.key();knockSlots();}};kp.appendChild(b);});
+  $('pdel').onclick=()=>{puzzle.guess.pop();knockSlots();};
+  $('pgo').onclick=knockGo;$('px').onclick=()=>{closePuzzle();out('Кнок прерван.','sys');prompt_();};
+  knockSlots();
+}
+function knockSlots(){const s=$('sl');if(!s)return;s.innerHTML='';for(let i=0;i<puzzle.seq.length;i++){const d=document.createElement('div');d.className='slot'+(puzzle.guess[i]!=null?' fill':'');d.style.width='56px';d.style.fontSize='14px';d.textContent=puzzle.guess[i]!=null?puzzle.guess[i]:'';s.appendChild(d);}}
+function knockGo(){
+  if(puzzle.guess.length<puzzle.seq.length){out('Последовательность неполная.','err');return;}
+  const ok=puzzle.guess.every((p,i)=>p===puzzle.seq[i]);
+  rawln('<span class="me"></span>knock '+puzzle.guess.join(','));
+  if(ok){const h=puzzle.h;closePuzzle();sfx.ok();out('✓ SSH открылся после стука.','ok');enterSession(h);}
+  else{sfx.bad();bump(4);puzzle.guess=[];knockSlots();out('✗ Порт не ответил — неверный порядок. Трейс растёт. Попробуй снова.','err');}
+}
+
+/* --- rce: order ROP gadgets --- */
+function breachRce(h){
+  const n=3+Math.min(3,h.diff-2);
+  const gadgets=[];for(let i=0;i<n;i++)gadgets.push({addr:'0x'+(0x400000+rnd(256,4096)).toString(16),op:['pop rdi','pop rsi','mov rax','syscall','pop rdx','ret'][i%6],order:i});
+  // correct order = by addr ascending
+  const correct=gadgets.slice().sort((a,b)=>parseInt(a.addr)-parseInt(b.addr)).map(g=>g.addr);
+  puzzle={type:'rce',h,gadgets,correct,chain:[]};
+  box(['BUFFER OVERFLOW // собери ROP-цепочку','Стек растёт вверх: гаджеты должны идти по возрастанию адреса.',S.tools.kit>0?'Кит подсветил верный порядок в подсказке.':'Отсортируй адреса сам, от меньшего к большему.'],'am');
+  renderRce();
+}
+function renderRce(){
+  const hintOrder=S.tools.kit>0?'<div class="hint am">Верный порядок: '+puzzle.correct.join(' → ')+'</div>':'';
+  ovl.innerHTML='<h4>ROP CHAIN // порядок гаджетов (по возрастанию адреса)</h4>'+hintOrder+
+    '<div class="hint">Цепочка: <span class="cy" id="chain">(пусто)</span></div>'+
+    '<div class="rop" id="gw"></div>'+
+    '<div class="act"><button id="pdel">⌫ снять</button><button class="go" id="pgo">⚡ Запустить эксплойт</button><button class="cancel" id="px">отмена</button></div>';
+  showOvl();
+  drawRce();
+  $('pdel').onclick=()=>{puzzle.chain.pop();drawRce();};
+  $('pgo').onclick=rceGo;$('px').onclick=()=>{closePuzzle();out('Эксплойт прерван.','sys');prompt_();};
+}
+function drawRce(){
+  $('chain').textContent=puzzle.chain.length?puzzle.chain.join(' → '):'(пусто)';
+  const gw=$('gw');gw.innerHTML='';
+  puzzle.gadgets.forEach(g=>{const used=puzzle.chain.includes(g.addr);const b=document.createElement('button');b.disabled=used;b.style.opacity=used?.35:1;
+    b.innerHTML=g.addr+' <span class="sys">'+g.op+'</span>';b.onclick=()=>{if(!used&&puzzle.chain.length<puzzle.gadgets.length){puzzle.chain.push(g.addr);sfx.key();drawRce();}};gw.appendChild(b);});
+}
+function rceGo(){
+  if(puzzle.chain.length<puzzle.gadgets.length){out('Цепочка короче, чем нужно.','err');return;}
+  const ok=puzzle.chain.every((a,i)=>a===puzzle.correct[i]);
+  rawln('<span class="me"></span>run rop_chain['+puzzle.chain.length+']');
+  if(ok){const h=puzzle.h;closePuzzle();sfx.ok();out('✓ RIP перехвачен, шелл получен.','ok');enterSession(h);}
+  else{sfx.bad();bump(5);puzzle.chain=[];drawRce();out('✗ SIGSEGV: стек разрушен неверным порядком. Трейс растёт. Пересобери цепочку.','err');}
+}
+
+/* ---------- inside session ---------- */
+function needSession(){if(!session){out('Нет активной сессии. Сначала scan → exploit.','err');return false;}return true;}
+cmd('ls',()=>{if(!needSession())return;const h=session.host;bump(1.2);
+  const files=['.bash_history','etc/','var/log/','home/',...(session.root?['root/','shadow']:[])];
+  box(['drwxr-xr-x  '+h.name+':/','  '+files.join('\n  '),'','Ценные файлы — команда loot'],'');});
+cmd('cat',a=>{if(!needSession())return;const n=(a||'').trim();
+  if(n==='shadow'&&!session.root){out('cat: shadow: отказано в доступе (нужен root)','err');return;}
+  if(n.includes('history')){out('...\nssh admin@internal\nmysql -u root\nrm -rf /var/log/*.1','sys');return;}
+  if(n==='shadow'){out('root:$6$x9f...:19000:0:99999:7:::','mg');return;}
+  out('cat: '+(n||'<файл>')+': нет такого файла. Смотри loot.','sys');});
+cmd('loot',()=>{if(!needSession())return;const h=session.host;
+  box(['ЦЕННОЕ НА '+h.name+':'].concat(h.loot.map(f=>{const got=S.done[h.ip+':'+f[0]];const lock=f[3]&&!session.root;
+    return '  '+(got?'[взято] ':lock?'[root]  ':'        ')+f[0].padEnd(16)+(f[2]>0?f[2]+' ¤':'данные')+'  '+f[1];})));
+  if(h.loot.some(f=>f[3]&&!session.root))out('Часть файлов под root. privesc поднимет права.','warn');});
+cmd('privesc',()=>{if(!needSession())return;if(session.root){out('Ты уже root.','warn');return;}privescGame();});
+function privescGame(){
+  const opts=[['/usr/bin/vault.sh  (SUID root, доступен на запись)',true],['/etc/hostname  (обычный файл)',false],['/home/user/notes.txt',false],['/bin/ls  (стандартный бинарник)',false]];
+  shuffle(opts);
+  box(['PRIVESC // поиск вектора повышения прав','find / -perm -4000 ... нашёл подозрительные файлы.','Выбери, что эксплуатировать для root:'],'am');
+  ovl.innerHTML='<h4>LINPEAS // выбери вектор</h4><div class="choice" id="ch"></div><div class="act"><button class="cancel" id="px">отмена</button></div>';
+  showOvl();const ch=$('ch');
+  opts.forEach(o=>{const b=document.createElement('button');b.textContent=o[0];b.onclick=()=>{rawln('<span class="me"></span>exploit '+esc(o[0].split(' ')[0]));
+    if(o[1]){closePuzzle();session.root=true;sfx.root();box(['>>> ПРАВА ПОВЫШЕНЫ. Теперь ты root.','Доступна вся добыча и команда persist.'],'gr');hud();prompt_();}
+    else{sfx.bad();bump(3);b.style.borderColor='var(--red)';out('✗ Не тот вектор, лог сработал (+трейс).','err');}};ch.appendChild(b);});
+  $('px').onclick=()=>{closePuzzle();out('Privesc прерван.','sys');prompt_();};
+}
+cmd('exfil',a=>{if(!needSession())return;const n=(a||'').trim();const h=session.host;
+  const f=h.loot.find(x=>x[0]===n||x[0].startsWith(n));
+  if(!f){out('exfil: файл не найден. loot — список.','err');return;}
+  if(f[3]&&!session.root){out('exfil: '+f[0]+': нужен root. Сделай privesc.','err');return;}
+  if(S.done[h.ip+':'+f[0]]){out('Уже вытащено.','warn');return;}
+  exfil(h,f);});
+async function exfil(h,f){
+  bump(3);await type('scp '+f[0]+' → deck://archive','sys',6);
+  const bar=out('[                    ] 0%','cy');
+  for(let p=0;p<=100;p+=10){bar.textContent='['+'█'.repeat(p/5).padEnd(20)+'] '+p+'%';packetFrom(h.ip,'#2de5d2');bump(.4);await sleep(45);}
+  S.done[h.ip+':'+f[0]]=true;S.loot.push({name:f[0],desc:f[1],from:h.name});
+  if(f[2]>0){S.cred+=f[2];sfx.coin();out('+ '+f[2]+' ¤ зачислено.','ok');}else{sfx.grab();out('Данные в архиве дека.','ok');}
+  hud();save();checkDone(h);prompt_();
+}
+cmd('persist',()=>{if(!needSession())return;const h=session.host;
+  if(S.tools.root<1){out('persist: нет руткита. Купи в магазине (buy root).','err');return;}
+  if(!session.root){out('persist: нужен root. Сделай privesc.','err');return;}
+  if(S.backdoors.includes(h.ip)){out('На узле уже стоит бэкдор.','warn');return;}
+  if(S.backdoors.length>=S.tools.root+1){out('Лимит бэкдоров: '+(S.tools.root+1)+'. Качай руткит.','err');return;}
+  S.backdoors.push(h.ip);sfx.root();box(['◈ БЭКДОР УСТАНОВЛЕН на '+h.name,'Узел теперь в твоём ботнете и приносит пассивный доход. Он останется на карте сети.'],'gr');
+  layoutNodes();hud();save();});
+cmd('clean',()=>{if(!needSession())return;const cut=Math.min(S.trace,40);S.trace=Math.max(0,S.trace-cut);sfx.ok();
+  out('shred /var/log/* · history -c — логи стёрты. − '+Math.round(cut)+'% трейса.','ok');hud();save();});
+cmd('disconnect',()=>{if(!session){out('Нет сессии.','err');return;}out('Соединение с '+session.host.name+' закрыто.','sys');session=null;closePuzzle();hud();prompt_();});
+
+function checkDone(h){
+  const all=h.loot.every(f=>S.done[h.ip+':'+f[0]]);
+  if(!all)return;sfx.grab();
+  if(h.proc){const b=rnd(h.reward[0],h.reward[1]);S.cred+=b;S.rep+=1;box(['✓ ФРИЛАНС ЗАКРЫТ: '+h.name,'Брокер доплатил +'+b+' ¤ и +1 реп.'],'am');
+    if(!S.backdoors.includes(h.ip)){procTargets=procTargets.filter(x=>x!==h);if(session&&session.host===h)session=null;}
+    procTargets.push(genProc());}
+  else{const b=rnd(h.reward[0],h.reward[1]);S.cred+=b;S.rep+=h.rep;S.done['story'+h.ip]=true;S.story++;
+    box(['★ КОНТРАКТ ЗАКРЫТ: '+h.name,'Премия +'+b+' ¤ и +'+h.rep+' реп.',S.story<STORY.length?'Открыт следующий контракт. Набери jobs.':'Это был финал.'],'mg');
+    if(session&&session.host===h&&!S.backdoors.includes(h.ip))session=null;
+    if(S.story>=STORY.length)ending();}
+  layoutNodes();hud();save();
+}
+function ending(){box(['╔════════════════════════════════╗','  ТЫ — ЛЕГЕНДА СЕТИ. Город шепчет твой сигнал.','  Кредиты: '+S.cred.toLocaleString('ru-RU')+' ¤ · Реп: '+S.rep+' · Ботнет: '+S.backdoors.length,'  Фриланс и ботнет бесконечны — играй дальше.','╚════════════════════════════════╝'],'mg');}
+
+/* ---------- shop / files / botnet windows ---------- */
+cmd('shop',()=>openWin('ЧЁРНЫЙ РЫНОК КИБЕРВАРА',shopBody));
+function shopBody(wb){
+  Object.keys(TOOLS).forEach(id=>{const t=TOOLS[id],lv=S.tools[id],maxed=lv>=t.max,cost=toolCost(id);
+    const it=document.createElement('div');it.className='item';
+    it.innerHTML='<div class="t"><span>['+id+'] '+t.name+'</span><span class="p">ур. '+lv+'/'+t.max+'</span></div>'+
+      '<div class="d">'+t.desc+'</div><div class="bar-mini"><i style="width:'+(lv/t.max*100)+'%"></i></div>';
+    const b=document.createElement('button');b.className='buy';b.textContent=maxed?'МАКСИМУМ':'Купить · '+cost+' ¤';b.disabled=maxed||S.cred<cost;
+    b.onclick=()=>{if(S.cred<cost)return;S.cred-=cost;S.tools[id]++;sfx.coin();hud();save();out('✓ '+t.name+' → ур. '+S.tools[id]+' (− '+cost+' ¤)','cy');openWin('ЧЁРНЫЙ РЫНОК КИБЕРВАРА',shopBody);};
+    it.appendChild(b);wb.appendChild(it);});
+}
+cmd('buy',a=>{const id=(a||'').trim();if(!TOOLS[id]){out('buy: товар не найден (cpu/proxy/kit/root).','err');return;}
+  const lv=S.tools[id];if(lv>=TOOLS[id].max){out('Уже максимум.','warn');return;}const c=toolCost(id);
+  if(S.cred<c){out('Не хватает '+(c-S.cred)+' ¤.','err');return;}S.cred-=c;S.tools[id]++;sfx.coin();out('✓ '+TOOLS[id].name+' → ур. '+S.tools[id],'cy');hud();save();});
+cmd('files',()=>openWin('АРХИВ ДОБЫЧИ',wb=>{if(!S.loot.length){wb.innerHTML='<div class="d">Архив пуст. Вытаскивай файлы через exfil.</div>';return;}
+  S.loot.slice().reverse().forEach(f=>{const it=document.createElement('div');it.className='item';it.innerHTML='<div class="t"><span>'+esc(f.name)+'</span><span class="p">'+esc(f.from)+'</span></div><div class="d">'+esc(f.desc)+'</div>';wb.appendChild(it);});}));
+cmd('botnet',()=>openWin('БОТНЕТ // пассивный доход',wb=>{
+  const perTick=botnetIncome();
+  wb.innerHTML='<div class="d">Бэкдоров: <b style="color:var(--green)">'+S.backdoors.length+'</b> / лимит '+(S.tools.root+1)+'. Доход: <b style="color:var(--amber)">'+perTick+' ¤</b> каждые 15 c.</div>';
+  if(!S.backdoors.length){const e=document.createElement('div');e.className='d';e.textContent='Пока пусто. Вскрой узел до root и поставь persist (нужен руткит).';wb.appendChild(e);}
+  S.backdoors.forEach(ip=>{const h=STORY.find(x=>x.ip===ip)||{name:ip,diff:1};const it=document.createElement('div');it.className='item';
+    it.innerHTML='<div class="t"><span>◈ '+esc(h.name)+'</span><span class="p">+'+(10+h.diff*8)+' ¤/тик</span></div><div class="d">'+esc(ip)+' · бэкдор активен</div>';wb.appendChild(it);});}));
+function botnetIncome(){return S.backdoors.reduce((s,ip)=>{const h=STORY.find(x=>x.ip===ip);return s+(h?10+h.diff*8:12);},0)*(1+S.tools.root*0.1)|0;}
+
+let winEl=null;
+function openWin(title,body){
+  closeWin();
+  const w=document.createElement('div');w.className='win';
+  w.innerHTML='<div class="wh"><span>▣ '+title+'</span><button class="x" aria-label="Закрыть">×</button></div><div class="wb"></div>';
+  document.body.appendChild(w);winEl=w;
+  body(w.querySelector('.wb'));
+  w.querySelector('.x').onclick=closeWin;
+  dragWin(w,w.querySelector('.wh'));
+}
+function closeWin(){if(winEl){winEl.remove();winEl=null;}}
+function dragWin(w,handle){let ox,oy,drag=false;
+  handle.addEventListener('pointerdown',e=>{if(e.target.classList.contains('x'))return;drag=true;const r=w.getBoundingClientRect();w.style.transform='none';w.style.left=r.left+'px';w.style.top=r.top+'px';ox=e.clientX-r.left;oy=e.clientY-r.top;handle.setPointerCapture(e.pointerId);});
+  handle.addEventListener('pointermove',e=>{if(!drag)return;w.style.left=Math.max(0,Math.min(innerWidth-60,e.clientX-ox))+'px';w.style.top=Math.max(40,Math.min(innerHeight-40,e.clientY-oy))+'px';});
+  handle.addEventListener('pointerup',()=>drag=false);
+}
+
+cmd('reset',a=>{if((a||'').trim()==='yes'){S=FRESH();S.seen=true;save();location.reload();}else box(['Сбросить весь прогресс? Наберите  reset yes','Это нельзя отменить.'],'rd');});
+
+/* ---------- exec + input ---------- */
+function prompt_(){hud();}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function execute(line){
+  line=line.trim();if(!line)return;
+  out(line,'me');
+  if(S.hist[S.hist.length-1]!==line){S.hist.push(line);if(S.hist.length>60)S.hist.shift();}
+  histIdx=S.hist.length;
+  const sp=line.indexOf(' ');const name=(sp<0?line:line.slice(0,sp)).toLowerCase();const arg=sp<0?'':line.slice(sp+1);
+  const fn=C[name];
+  if(fn){try{fn(arg);}catch(e){out('Ошибка: '+e.message,'err');}}
+  else out(name+': команда не найдена. help — список.','err');
+  save();
+}
+let histIdx=0;
+$('cli').addEventListener('submit',e=>{e.preventDefault();const v=$('in').value;$('in').value='';if(v.trim())execute(v);});
+$('in').addEventListener('keydown',e=>{
+  if(e.key==='ArrowUp'){e.preventDefault();if(histIdx>0){histIdx--;$('in').value=S.hist[histIdx]||'';}}
+  else if(e.key==='ArrowDown'){e.preventDefault();if(histIdx<S.hist.length-1){histIdx++;$('in').value=S.hist[histIdx]||'';}else{histIdx=S.hist.length;$('in').value='';}}
+  else if(e.key==='Tab'){e.preventDefault();const v=$('in').value.toLowerCase();const m=CMDLIST.filter(c=>c.startsWith(v));if(m.length===1)$('in').value=m[0]+' ';else if(m.length>1)out(m.join('  '),'sys');}
+});
+document.querySelectorAll('.tbtn[data-cmd]').forEach(b=>b.onclick=()=>{execute(b.dataset.cmd);$('in').focus();});
+$('muteBtn').onclick=()=>execute('mute');
+
+/* ---------- income + clock loops ---------- */
+function startLoops(){
+  clearInterval(traceTimer);clearInterval(incomeTimer);
+  traceTimer=setInterval(()=>{traceTick();$('clock').textContent=clk();},1000);
+  incomeTimer=setInterval(()=>{if(S.backdoors.length){const inc=botnetIncome();S.cred+=inc;sfx.coin();hud();save();const d=out('◈ ботнет: + '+inc+' ¤','gr');setTimeout(()=>{},10);}},15000);
+}
+
+/* ---------- boot ---------- */
+async function bootSeq(){
+  $('boot').hidden=false;const b=$('boot');b.innerHTML='';
+  const lines=['NETRUNNER CYBERDECK OS 8.8  (c) 2088 GhostWire','','POST .... ok','neural-link .......... ONLINE','crypto-core .......... ONLINE','proxy-mesh ........... negotiating','loading exploit db ... '+rnd(14000,19000)+' signatures','mounting /dev/deck ... ok','', 'Запуск оболочки...'];
+  for(const l of lines){const d=document.createElement('div');d.className='bl';b.appendChild(d);
+    if(reduced()){d.textContent=l;}else{for(let i=0;i<l.length;i++){d.textContent+=l[i];if(i%2)sfx.type();await sleep(6);}}
+    await sleep(reduced()?0:90);}
+  await sleep(reduced()?0:300);$('boot').hidden=true;$('os').style.display='flex';
+  mapResize();if(mapRAF)cancelAnimationFrame(mapRAF);drawMap(0);startLoops();
+  term.innerHTML='';
+  await type('Нейро-линк установлен. Добро пожаловать в сеть.','ok',8);
+  box(['Ты на бирже контрактов Найт-Сити. Слева — живая карта сети: кликай узлы.','Начни: набери  jobs  или  help.'],'cy');
+  if(S.story>=STORY.length)ending();
+  if(!procTargets.length)procTargets=[genProc()];
+  layoutNodes();hud();$('in').focus();
+}
+
+/* ---------- gate ---------- */
+function isDesktop(){try{return matchMedia('(pointer:fine)').matches || innerWidth>=900;}catch(e){return innerWidth>=900;}}
+function launch(){ $('gate').hidden=true; load(); if(S.seen){ $('intro').hidden=true; bootSeq(); } else { $('intro').hidden=false; } }
+$('enter').onclick=()=>{$('intro').hidden=true;S.seen=true;save();bootSeq();};
+$('forceEnter').onclick=launch;
+window.addEventListener('resize',()=>{if($('os').style.display==='flex')mapResize();});
+
+if(isDesktop()){ $('gate').hidden=true; launch(); }
+else { $('gate').hidden=false; }
+})();
+</script>
+</body>
+</html>
